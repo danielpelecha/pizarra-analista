@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-01-3">
+<meta name="app-version" content="2026-09-01-4">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -76,6 +76,15 @@
     border:2px solid var(--border);
     border-radius:8px;
     font-family: inherit;
+  }
+  #lineupMatchSelect{
+    width:100%;
+    font-size:16px;
+    padding:10px;
+    border:2px solid var(--border);
+    border-radius:8px;
+    font-family:inherit;
+    margin-bottom:6px;
   }
   .pw-wrap{ position:relative; }
   .pw-wrap input{ padding-right:46px; }
@@ -416,6 +425,20 @@
   }
   .live-feed-row .min{ color:var(--grey); min-width:32px; font-weight:bold; }
 
+  /* ---- Panel de estadísticas de equipo (sin jugador) ---- */
+  .team-stats-panel{
+    margin-top:18px; background:var(--lightblue); border:2px solid var(--border);
+    border-radius:10px; padding:14px;
+  }
+  .team-stats-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:10px; }
+  .team-stat-card{
+    background:#fff; border:3px solid var(--border); border-radius:10px;
+    padding:10px; text-align:center;
+  }
+  .team-stat-count{ font-size:28px; font-weight:bold; line-height:1; }
+  .team-stat-label{ font-size:12px; color:var(--navy); font-weight:bold; margin-top:4px; }
+  .team-stat-minutes{ font-size:11px; color:var(--grey); margin-top:4px; }
+
   /* ---- Organizar estadísticas (color + orden con arrastre) ---- */
   .stat-manager{
     margin-top:16px; background:var(--lightblue); border:2px solid var(--border);
@@ -656,6 +679,13 @@
         <p class="subtitle" style="text-align:left;">Elige la formación (o una jugada a balón parado) y asigna jugadores de tu plantilla a cada posición.</p>
         <div id="lineupNoPlayersMsg" class="hint hidden">Todavía no hay jugadores en la Plantilla. Añádelos primero en la pestaña "Plantilla".</div>
 
+        <label for="lineupMatchSelect">Vincular esta alineación a un partido</label>
+        <select id="lineupMatchSelect">
+          <option value="">— Sin vincular (solo para descargar la imagen) —</option>
+          <option value="__new__">➕ Crear un partido nuevo con esta alineación</option>
+        </select>
+        <p class="hint">Si la vinculas a un partido, al guardarla el once y los suplentes ya aparecerán marcados cuando abras ese partido en la pestaña "Partidos".</p>
+
         <div class="match-grid-lineup">
           <div>
             <label for="matchFecha">Fecha</label>
@@ -677,6 +707,9 @@
             </select>
           </div>
         </div>
+
+        <button class="btn" id="saveLineupToMatchBtn" style="width:auto; margin-top:0; margin-bottom:20px; display:none;">💾 Guardar alineación para este partido</button>
+        <div id="lineupSaveMsg" class="msg"></div>
 
         <div class="lineup-wrap">
           <div class="lineup-controls">
@@ -724,6 +757,15 @@
             <div id="matchDetailContent" class="hidden">
               <div class="match-grid" id="matchMetaForm"></div>
 
+              <div style="margin:14px 0;">
+                <button class="btn secondary" id="addStatColBtn" style="width:auto; margin-top:0;">➕ Añadir estadística</button>
+                <button class="btn secondary" id="toggleStatManagerBtn" style="width:auto; margin-top:0; margin-left:8px;">🎨 Organizar estadísticas</button>
+                <div id="statManagerPanel" class="stat-manager hidden">
+                  <p class="hint">Arrastra ⠿ para cambiar el orden. Toca el color para cambiarlo. Se aplica a los botones del modo en vivo y a las columnas de la tabla.</p>
+                  <div id="statManagerList"></div>
+                </div>
+              </div>
+
               <div id="liveSection" class="live-section"></div>
 
               <p class="hint" style="margin-top:16px;">Minutos, goles, asistencias, ocasiones y tarjetas se rellenan solos si usas el modo en vivo de arriba. Las estadísticas personalizadas se anotan aquí a mano.</p>
@@ -733,13 +775,8 @@
                   <tbody id="statsTableBody"></tbody>
                 </table>
               </div>
-              <button class="btn secondary" id="addStatColBtn" style="width:auto; margin-top:16px;">➕ Añadir estadística</button>
-              <button class="btn secondary" id="toggleStatManagerBtn" style="width:auto; margin-top:16px; margin-left:8px;">🎨 Organizar estadísticas</button>
-              <button class="btn" id="deleteMatchBtn" style="width:auto; margin-top:16px; margin-left:8px; background:var(--danger);">🗑 Eliminar partido</button>
-              <div id="statManagerPanel" class="stat-manager hidden">
-                <p class="hint">Arrastra ⠿ para cambiar el orden. Toca el color para cambiarlo. Se aplica a los botones del modo en vivo y a las columnas de la tabla.</p>
-                <div id="statManagerList"></div>
-              </div>
+              <div id="teamStatsPanel" class="team-stats-panel hidden"></div>
+              <button class="btn" id="deleteMatchBtn" style="width:auto; margin-top:16px; background:var(--danger);">🗑 Eliminar partido</button>
               <div id="matchMsg" class="msg"></div>
             </div>
           </div>
@@ -816,9 +853,11 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
     tabPanels[tab].classList.remove("hidden");
     if(tab === "plantilla"){ loadPlayers(); }
     if(tab === "alineacion"){
-      ensurePlayersLoadedThen(()=>{
+      ensurePlayersLoadedThen(async ()=>{
         if(starterPositions.length === 0){ resetStarterPositionsFromFormation(); }
         renderLineupSelects();
+        await loadMatches();
+        renderLineupMatchOptions();
       });
     }
     if(tab === "partidos"){
@@ -890,6 +929,8 @@ document.getElementById("signupBtn").addEventListener("click", async ()=>{
 });
 
 document.getElementById("logoutBtn").addEventListener("click", async ()=>{
+  releaseWakeLock();
+  unsubscribeMatchRealtime();
   await supabase.auth.signOut();
   showScreen(screenAuth);
 });
@@ -920,6 +961,31 @@ document.getElementById("checkUpdateBtn").addEventListener("click", async ()=>{
   }
 });
 
+// ---------------- Mantener la pantalla encendida (Wake Lock) ----------------
+// En móvil/tablet el navegador apaga la pantalla sola tras unos segundos sin tocarla.
+// Mientras la app esté abierta con sesión iniciada, evitamos que se apague.
+let wakeLockSentinel = null;
+
+async function requestWakeLock(){
+  if(!("wakeLock" in navigator)) return; // navegador antiguo sin soporte: no hacemos nada, sin errores
+  try{
+    wakeLockSentinel = await navigator.wakeLock.request("screen");
+    wakeLockSentinel.addEventListener("release", ()=>{ wakeLockSentinel = null; });
+  }catch(e){
+    // Puede fallar si la pestaña no está visible en ese instante; no es grave, se reintenta luego.
+  }
+}
+function releaseWakeLock(){
+  if(wakeLockSentinel){ wakeLockSentinel.release(); wakeLockSentinel = null; }
+}
+// El sistema libera el wake lock automáticamente si cambias de pestaña/app;
+// lo volvemos a pedir en cuanto la pantalla vuelve a estar visible.
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState === "visible" && !screenApp.classList.contains("hidden")){
+    requestWakeLock();
+  }
+});
+
 // ---------------- CREAR CLUB (primera vez) ----------------
 const createClubMsg = document.getElementById("createClubMsg");
 
@@ -939,6 +1005,7 @@ document.getElementById("createClubBtn").addEventListener("click", async ()=>{
   currentClub = data;
   await loadClubIntoApp();
   showScreen(screenApp);
+  requestWakeLock();
 });
 
 // ---------------- CLUB: nombre + escudo ----------------
@@ -1549,6 +1616,104 @@ document.getElementById("resetPositionsBtn").addEventListener("click", ()=>{
 [matchFecha, matchHora, matchRival, matchCondicion].forEach(el=> el.addEventListener("input", drawPitch));
 matchCondicion.addEventListener("change", drawPitch);
 
+// ---------------- Vincular la alineación a un partido de Partidos ----------------
+const lineupMatchSelect = document.getElementById("lineupMatchSelect");
+const saveLineupToMatchBtn = document.getElementById("saveLineupToMatchBtn");
+const lineupSaveMsg = document.getElementById("lineupSaveMsg");
+let lineupLinkedMatchId = "";
+
+function renderLineupMatchOptions(){
+  const prevValue = lineupMatchSelect.value;
+  lineupMatchSelect.innerHTML = `
+    <option value="">— Sin vincular (solo para descargar la imagen) —</option>
+    <option value="__new__">➕ Crear un partido nuevo con esta alineación</option>
+  `;
+  matchesList.forEach(m=>{
+    const opt = document.createElement("option");
+    opt.value = m.id;
+    opt.textContent = (m.date || "s/f") + " · " + (m.rival || "Rival sin definir");
+    lineupMatchSelect.appendChild(opt);
+  });
+  if(matchesList.some(m=> m.id === prevValue)){ lineupMatchSelect.value = prevValue; }
+}
+
+lineupMatchSelect.addEventListener("change", async ()=>{
+  clearMsg(lineupSaveMsg);
+  const val = lineupMatchSelect.value;
+
+  if(val === ""){
+    lineupLinkedMatchId = "";
+    saveLineupToMatchBtn.style.display = "none";
+    return;
+  }
+
+  if(val === "__new__"){
+    const payload = {
+      club_id: currentClub.id,
+      date: matchFecha.value || new Date().toISOString().slice(0,10),
+      rival: matchRival.value || "",
+      fase: "pretemporada",
+      condicion: matchCondicion.value || "LOCAL",
+      sistema_partido: formationSelect.value,
+      stats: {},
+      live: {},
+      last_modified: new Date().toISOString(),
+    };
+    const { data, error } = await supabase.from("matches").insert(payload).select().single();
+    if(error){ showMsg(lineupSaveMsg, "No se ha podido crear el partido: " + error.message, "error"); return; }
+    matchesList.unshift(data);
+    renderLineupMatchOptions();
+    lineupMatchSelect.value = data.id;
+    lineupLinkedMatchId = data.id;
+    saveLineupToMatchBtn.style.display = "inline-block";
+    showMsg(lineupSaveMsg, "Partido creado. Ya puedes guardar la alineación en él.", "success");
+    return;
+  }
+
+  // Partido ya existente: cargar sus datos en el formulario
+  const m = matchesList.find(x=> x.id === val);
+  if(m){
+    matchFecha.value = m.date || "";
+    matchRival.value = m.rival || "";
+    matchCondicion.value = m.condicion || "LOCAL";
+  }
+  lineupLinkedMatchId = val;
+  saveLineupToMatchBtn.style.display = "inline-block";
+  drawPitch();
+});
+
+saveLineupToMatchBtn.addEventListener("click", async ()=>{
+  if(!lineupLinkedMatchId) return;
+  clearMsg(lineupSaveMsg);
+
+  const starters = lineupStarters.filter(id=> !!id);
+  if(starters.length === 0){
+    showMsg(lineupSaveMsg, "Elige al menos un jugador titular antes de guardar.", "error");
+    return;
+  }
+
+  // Traemos el partido tal cual está ahora mismo, para no pisar datos del modo en vivo
+  // si ese partido ya se hubiera empezado a jugar.
+  const { data: freshMatch, error: fetchErr } = await supabase.from("matches").select("*").eq("id", lineupLinkedMatchId).single();
+  if(fetchErr){ showMsg(lineupSaveMsg, "No se ha podido abrir el partido: " + fetchErr.message, "error"); return; }
+
+  const live = freshMatch.live && typeof freshMatch.live === "object" ? { ...freshMatch.live } : {};
+  live.startersIds = starters;
+
+  const { error } = await supabase.from("matches").update({
+    date: matchFecha.value || freshMatch.date,
+    rival: matchRival.value || freshMatch.rival,
+    condicion: matchCondicion.value || freshMatch.condicion,
+    sistema_partido: formationSelect.value,
+    live,
+    last_modified: new Date().toISOString(),
+  }).eq("id", lineupLinkedMatchId);
+
+  if(error){ showMsg(lineupSaveMsg, "No se ha podido guardar: " + error.message, "error"); return; }
+
+  showMsg(lineupSaveMsg, "✅ Alineación guardada. Al abrir este partido en Partidos, el once ya estará marcado.", "success");
+});
+
 function fmtFecha(v){
   if(!v) return "Fecha por confirmar";
   const [y,m,d] = v.split("-");
@@ -1795,12 +1960,38 @@ document.getElementById("downloadLineupBtn").addEventListener("click", ()=>{
 // PARTIDOS: lista, ficha del partido, modo en vivo, estadísticas
 // (misma lógica que la herramienta HTML anterior, ahora guardada en Supabase)
 // ==================================================================
-let statColumns = [];               // [{id, key, label}] — columnas de estadísticas del club
+let statColumns = [];               // [{id, key, label, color, orden, scope}] — columnas de estadísticas del club
 let matchesList = [];               // resumen de partidos del club (para la lista de la izquierda)
 let currentMatch = null;            // partido abierto actualmente (objeto completo con stats/live)
 let liveSelected = null;
 let liveCambioOut = null;
 let liveTickerInterval = null;
+let matchRealtimeChannel = null;    // suscripción en vivo al partido abierto (para ver cambios de otro dispositivo)
+
+// ---------------- Sincronización en tiempo real entre dispositivos ----------------
+// Si dos dispositivos tienen abierto el MISMO partido a la vez, los cambios de uno
+// (goles, minutos, estadísticas...) aparecen solos en el otro, sin recargar.
+function subscribeToMatchRealtime(matchId){
+  unsubscribeMatchRealtime();
+  matchRealtimeChannel = supabase
+    .channel("match_" + matchId)
+    .on("postgres_changes",
+      { event: "UPDATE", schema: "public", table: "matches", filter: "id=eq." + matchId },
+      (payload) => {
+        if(!currentMatch || currentMatch.id !== matchId) return;
+        const incoming = payload.new;
+        // Si el cambio lo hemos hecho nosotros mismos hace un instante, no hace falta re-pintar.
+        if(incoming.last_modified === currentMatch.last_modified) return;
+        currentMatch = { ...currentMatch, ...incoming };
+        liveSelected = null; liveCambioOut = null;
+        renderMatchDetail();
+      }
+    )
+    .subscribe();
+}
+function unsubscribeMatchRealtime(){
+  if(matchRealtimeChannel){ supabase.removeChannel(matchRealtimeChannel); matchRealtimeChannel = null; }
+}
 
 const matchListEl = document.getElementById("matchList");
 const matchDetailEmpty = document.getElementById("matchDetailEmpty");
@@ -1848,10 +2039,21 @@ async function loadStatColumns(){
 document.getElementById("addStatColBtn").addEventListener("click", async ()=>{
   const label = prompt("Nombre de la nueva estadística (ej: Regates, Faltas recibidas, MVP...)");
   if(!label) return;
+
+  const scopeAnswer = (prompt(
+    "¿Qué tipo de estadística es?\n\n" +
+    "Escribe 1, 2 o 3:\n" +
+    "1 = Normal (eliges un jugador cada vez que la anotas)\n" +
+    "2 = Portero (un solo toque, se anota sola en el portero que esté en el campo)\n" +
+    "3 = Equipo (un solo toque, sin jugador — para lo que hace/recibe el rival)",
+    "1"
+  ) || "1").trim();
+  const scope = scopeAnswer === "2" ? "goalkeeper" : scopeAnswer === "3" ? "team" : "player";
+
   const key = slugify(label) + "_" + Date.now().toString(36).slice(-4);
   const nextOrden = statColumns.length ? Math.max(...statColumns.map(c=>c.orden||0)) + 1 : 1;
   const color = STAT_PALETTE[statColumns.length % STAT_PALETTE.length];
-  const { data, error } = await supabase.from("stat_columns").insert({ club_id: currentClub.id, key, label, color, orden: nextOrden }).select().single();
+  const { data, error } = await supabase.from("stat_columns").insert({ club_id: currentClub.id, key, label, color, orden: nextOrden, scope }).select().single();
   if(error){ showMsg(matchMsg, "No se ha podido añadir la estadística: " + error.message, "error"); return; }
   statColumns.push(data);
   if(currentMatch){ ensureStatsForMatch(currentMatch); renderMatchDetail(); }
@@ -1988,6 +2190,7 @@ function renderMatchList(){
       if(error){ showMsg(matchMsg, "No se ha podido abrir el partido: " + error.message, "error"); return; }
       currentMatch = data;
       liveSelected = null; liveCambioOut = null;
+      subscribeToMatchRealtime(currentMatch.id);
       renderMatchList();
       renderMatchDetail();
     });
@@ -2011,6 +2214,7 @@ document.getElementById("newMatchBtn").addEventListener("click", async ()=>{
   if(error){ showMsg(matchMsg, "No se ha podido crear el partido: " + error.message, "error"); return; }
   matchesList.unshift(data);
   currentMatch = data;
+  subscribeToMatchRealtime(currentMatch.id);
   renderMatchList();
   renderMatchDetail();
 });
@@ -2018,6 +2222,7 @@ document.getElementById("newMatchBtn").addEventListener("click", async ()=>{
 document.getElementById("deleteMatchBtn").addEventListener("click", async ()=>{
   if(!currentMatch) return;
   if(!confirm(`¿Eliminar el partido del ${currentMatch.date} vs ${currentMatch.rival || "?"}? Esta acción no se puede deshacer.`)) return;
+  unsubscribeMatchRealtime();
   const { error } = await supabase.from("matches").delete().eq("id", currentMatch.id);
   if(error){ showMsg(matchMsg, "No se ha podido eliminar: " + error.message, "error"); return; }
   matchesList = matchesList.filter(m=> m.id !== currentMatch.id);
@@ -2051,22 +2256,38 @@ function ensureStatsForMatch(match){
   if(!match.stats) match.stats = {};
   players.forEach(p=>{
     if(!match.stats[p.id]) match.stats[p.id] = {};
-    statColumns.forEach(col=>{
+    statColumns.filter(c=> c.scope !== "team").forEach(col=>{
       if(match.stats[p.id][col.key] === undefined) match.stats[p.id][col.key] = "";
     });
   });
+  // "__team__" no es un jugador: aquí van los contadores de estadísticas de equipo
+  // (goles en contra, ocasiones en contra...), sin jugador asociado.
+  if(!match.stats.__team__) match.stats.__team__ = {};
+  statColumns.filter(c=> c.scope === "team").forEach(col=>{
+    if(match.stats.__team__[col.key] === undefined) match.stats.__team__[col.key] = 0;
+  });
+}
+
+function findCurrentGoalkeeper(match){
+  const { onPitch } = deriveLiveState(match);
+  return players.find(p=> onPitch.has(p.id) && (p.pos || "").toLowerCase().includes("porter")) || null;
 }
 
 // ==================================================================
 // MODO PARTIDO EN VIVO
 // ==================================================================
 function ensureLive(match){
-  if(!match.live || match.live.startersIds === undefined){
-    match.live = {
-      startersIds: [], started:false, finished:false, events:[],
-      accSeconds:0, runStartedAt:null, running:false, half:1, finalMinute:null,
-    };
-  }
+  // Completa individualmente cualquier campo que falte, en vez de sustituir el objeto
+  // entero — necesario porque una alineación guardada desde la pestaña Alineación puede
+  // traer solo "startersIds" sin el resto de campos del modo en vivo.
+  const defaults = {
+    startersIds: [], started:false, finished:false, events:[],
+    accSeconds:0, runStartedAt:null, running:false, half:1, finalMinute:null,
+  };
+  if(!match.live || typeof match.live !== "object"){ match.live = {}; }
+  Object.keys(defaults).forEach(k=>{
+    if(match.live[k] === undefined){ match.live[k] = defaults[k]; }
+  });
 }
 function liveSecondsNow(match){
   let s = match.live.accSeconds;
@@ -2117,10 +2338,16 @@ function recomputeStatsFromLive(match){
   players.forEach(p=>{ match.stats[p.id].minutos = minutes[p.id] || 0; });
 
   // Contador genérico: sirve tanto para goles/asistencias/... (tipos fijos) como
-  // para cualquier estadística personalizada que el entrenador haya creado.
+  // para cualquier estadística personalizada que el entrenador haya creado (incluida
+  // la de portero, que se anota siempre en el jugador que estaba de portero).
   const counters = {}; // { statKey: { playerId: total } }
+  const teamCounters = {}; // { statKey: total } — estadísticas de equipo, sin jugador
   match.live.events.forEach(ev=>{
     if(ev.type === "cambio") return;
+    if(ev.type === "team_stat"){
+      teamCounters[ev.key] = (teamCounters[ev.key] || 0) + 1;
+      return;
+    }
     const key = LIVE_STAT_MAP[ev.type] || (ev.type === "custom" ? ev.key : null);
     if(!key) return;
     if(!counters[key]) counters[key] = {};
@@ -2130,6 +2357,7 @@ function recomputeStatsFromLive(match){
   players.forEach(p=>{
     Object.keys(counters).forEach(key=>{ match.stats[p.id][key] = counters[key][p.id] || 0; });
   });
+  Object.keys(teamCounters).forEach(key=>{ match.stats.__team__[key] = teamCounters[key]; });
 }
 
 function buildLiveChip(p, match, zone, isSentOff){
@@ -2175,6 +2403,27 @@ function handleLiveCustomAction(match, statKey){
   if(!liveSelected){ alert("Primero toca a un jugador en 'En el campo'."); return; }
   match.live.events.push({ type:"custom", key: statKey, minute: currentLiveMinute(match), playerId: liveSelected });
   liveSelected = null;
+  recomputeStatsFromLive(match);
+  renderLive(match); renderStatsTableOnly(match); saveMatch(match);
+}
+
+// Estadísticas tipo "portero": un solo toque, sin elegir jugador — se anota sola en
+// quien esté jugando de portero en ese momento (por posición, entre los que están en el campo).
+function handleGoalkeeperAction(match, statKey){
+  const gk = findCurrentGoalkeeper(match);
+  if(!gk){
+    alert("No se ha identificado a ningún portero en el campo ahora mismo. Revisa que su posición incluya 'Portero' en la Plantilla y que esté entre los jugadores en el campo.");
+    return;
+  }
+  match.live.events.push({ type:"custom", key: statKey, minute: currentLiveMinute(match), playerId: gk.id });
+  recomputeStatsFromLive(match);
+  renderLive(match); renderStatsTableOnly(match); saveMatch(match);
+}
+
+// Estadísticas de EQUIPO: un solo toque, sin jugador (goles/ocasiones del rival, que no
+// podemos atribuir a ningún jugador nuestro). Solo se cuenta y se guarda el minuto.
+function handleTeamAction(match, statKey){
+  match.live.events.push({ type:"team_stat", key: statKey, minute: currentLiveMinute(match) });
   recomputeStatsFromLive(match);
   renderLive(match); renderStatsTableOnly(match); saveMatch(match);
 }
@@ -2351,6 +2600,10 @@ function renderLive(match){
     actions.className = "live-actions";
     // Un botón por cada estadística (excepto "minutos", que no es tocable), en el orden
     // y color que el entrenador haya configurado en "🎨 Organizar estadísticas".
+    // Tres comportamientos según el tipo (scope) de la estadística:
+    //  - "player" (normal): hay que tocar antes a un jugador en "En el campo"
+    //  - "goalkeeper": un solo toque, se anota sola en el portero que esté en el campo
+    //  - "team": un solo toque, sin jugador (para lo que hace/recibe el rival)
     const FIXED_KEY_TO_TYPE = { goles:"gol", asistencias:"asistencia", ocasiones:"ocasion", amarillas:"amarilla", rojas:"roja" };
     const FIXED_ICONS = { goles:"⚽ Gol", asistencias:"🅰️ Asistencia", ocasiones:"🎯 Ocasión", amarillas:"🟨 Amarilla", rojas:"🟥 Roja" };
     statColumns.filter(col=> col.key !== "minutos").forEach(col=>{
@@ -2361,8 +2614,15 @@ function renderLive(match){
       b.style.borderColor = color;
       b.style.color = "#ffffff";
       const fixedType = FIXED_KEY_TO_TYPE[col.key];
-      b.textContent = fixedType ? FIXED_ICONS[col.key] : ("📌 " + col.label);
-      b.addEventListener("click", ()=> fixedType ? handleLiveAction(match, fixedType) : handleLiveCustomAction(match, col.key));
+      let icon = fixedType ? FIXED_ICONS[col.key] : ("📌 " + col.label);
+      if(col.scope === "goalkeeper") icon = "🧤 " + col.label;
+      if(col.scope === "team") icon = "🔺 " + col.label;
+      b.textContent = icon;
+      b.addEventListener("click", ()=>{
+        if(col.scope === "team") return handleTeamAction(match, col.key);
+        if(col.scope === "goalkeeper") return handleGoalkeeperAction(match, col.key);
+        return fixedType ? handleLiveAction(match, fixedType) : handleLiveCustomAction(match, col.key);
+      });
       actions.appendChild(b);
     });
     const cambioBtn = document.createElement("button");
@@ -2438,10 +2698,11 @@ function renderLive(match){
 
 function renderStatsTableOnly(match){
   if(!statsTableBody) return;
+  const playerScopedCols = statColumns.filter(c=> c.scope !== "team");
   Array.from(statsTableBody.children).forEach((tr, i)=>{
     const p = players[i];
     if(!p || !match.stats[p.id]) return;
-    statColumns.forEach((col, ci)=>{
+    playerScopedCols.forEach((col, ci)=>{
       const td = tr.children[ci+1];
       if(!td) return;
       const inp = td.querySelector("input");
@@ -2455,6 +2716,43 @@ function renderStatsTableOnly(match){
       }
     });
   });
+  renderTeamStatsPanel(match);
+}
+
+// Panel de estadísticas de equipo (sin jugador): goles/ocasiones en contra, con sus minutos.
+function renderTeamStatsPanel(match){
+  const panel = document.getElementById("teamStatsPanel");
+  if(!panel) return;
+  const teamCols = statColumns.filter(c=> c.scope === "team");
+  if(teamCols.length === 0 || !match || !match.stats){ panel.classList.add("hidden"); panel.innerHTML = ""; return; }
+
+  panel.classList.remove("hidden");
+  panel.innerHTML = "";
+
+  const title = document.createElement("div");
+  title.style.cssText = "font-weight:bold;color:var(--navy);margin-bottom:8px;";
+  title.textContent = "Estadísticas de equipo (sin jugador asociado)";
+  panel.appendChild(title);
+
+  const grid = document.createElement("div");
+  grid.className = "team-stats-grid";
+  teamCols.forEach(col=>{
+    const minutes = (match.live && match.live.events ? match.live.events : [])
+      .filter(ev=> ev.type === "team_stat" && ev.key === col.key)
+      .map(ev=> ev.minute + "'");
+    const count = (match.stats.__team__ && match.stats.__team__[col.key]) || 0;
+
+    const card = document.createElement("div");
+    card.className = "team-stat-card";
+    card.style.borderColor = col.color || "var(--border)";
+    card.innerHTML = `
+      <div class="team-stat-count" style="color:${col.color || "var(--navy)"};">${count}</div>
+      <div class="team-stat-label">${escapeHtml(col.label)}</div>
+      <div class="team-stat-minutes">${minutes.length ? minutes.join(", ") : "—"}</div>
+    `;
+    grid.appendChild(card);
+  });
+  panel.appendChild(grid);
 }
 
 function renderMatchDetail(){
@@ -2506,10 +2804,11 @@ function renderMatchDetail(){
     matchMetaForm.appendChild(div);
   });
 
-  // ---- Tabla de estadísticas ----
+  // ---- Tabla de estadísticas (solo las de tipo "jugador"/"portero"; las de "equipo" van aparte) ----
+  const playerScopedCols = statColumns.filter(c=> c.scope !== "team");
   statsTableHead.innerHTML = "";
   const thName = document.createElement("th"); thName.textContent = "Jugador"; statsTableHead.appendChild(thName);
-  statColumns.forEach(col=>{
+  playerScopedCols.forEach(col=>{
     const th = document.createElement("th"); th.textContent = col.label; th.style.background = col.color || "var(--navy)"; statsTableHead.appendChild(th);
   });
 
@@ -2520,7 +2819,7 @@ function renderMatchDetail(){
     tdName.className = "name-td";
     tdName.textContent = displayAlias(p);
     tr.appendChild(tdName);
-    statColumns.forEach(col=>{
+    playerScopedCols.forEach(col=>{
       const td = document.createElement("td");
       const inp = document.createElement("input");
       inp.type = "text"; inp.inputMode = "decimal";
@@ -2536,6 +2835,8 @@ function renderMatchDetail(){
     });
     statsTableBody.appendChild(tr);
   });
+
+  renderTeamStatsPanel(currentMatch);
 }
 
 async function afterAuthChange(){
@@ -2565,6 +2866,7 @@ async function afterAuthChange(){
   currentClub = club;
   await loadClubIntoApp();
   showScreen(screenApp);
+  requestWakeLock();
 }
 
 // Arranque: comprobar si ya hay sesión guardada
