@@ -234,6 +234,12 @@ Dentro de `screenApp`, la barra de pestañas (`.tab-btn`) alterna la visibilidad
 
 ### 6.6 Equipo — ⏳ pendiente
 
+### 6.7 Barra de navegación fija y botón de actualización — ✅ implementado (01/09/2026)
+- La cabecera (`app-header`) y la barra de pestañas (`tabbar`) están envueltas en `#appTopBar`, con `position:sticky; top:0;` — quedan siempre visibles arriba de la pantalla, en cualquier pestaña y con cualquier posición de scroll, para poder cambiar de departamento sin perder de vista dónde se está.
+- **Continuidad de estado al cambiar de pestaña:** como la app es una sola página que nunca se recarga, cambiar de pestaña (p. ej. de Partidos a Ficha de jugador y volver) **no reinicia nada** — el cronómetro del modo en vivo, los eventos registrados y los datos del formulario del partido se conservan tal cual, porque solo se oculta/muestra el panel con CSS (`display:none`), sin destruir las variables de JavaScript ni el intervalo del cronómetro. El cronómetro usa una marca de tiempo real (`runStartedAt`) en vez de contar "ticks", así que el tiempo mostrado es siempre exacto aunque haya estado en segundo plano.
+- **Botón "🔄 Actualizar"** (junto a "Cerrar sesión"): pide al servidor una copia fresca de `index.html` (sin caché), compara su etiqueta de versión (`<meta name="app-version">`) con la que tiene cargada la página actual, y si son distintas recarga automáticamente; si son iguales, avisa de que ya está actualizado sin recargar. Se combina con cabeceras `Cache-Control: no-cache` en el propio HTML para que incluso un F5 normal traiga siempre la versión más reciente.
+- La constante `CURRENT_APP_VERSION` se lee del `<meta name="app-version" content="...">` del `<head>`; **cada despliegue nuevo debe actualizar este valor** para que la comprobación de versión funcione.
+
 ---
 
 ## 7. Incidencias ya resueltas (para no repetirlas)
@@ -305,6 +311,11 @@ Dentro de `screenApp`, la barra de pestañas (`.tab-btn`) alterna la visibilidad
 
 Si en el futuro Claude no puede subir cambios (error de autenticación al hacer `git push`), el usuario debe generar un nuevo token classic con scope `repo` en https://github.com/settings/tokens/new y pasárselo a Claude en la conversación. Claude lo guardará de nuevo para las siguientes sesiones.
 
+### Nota sobre el auto-deploy de Render (01/09/2026)
+
+El auto-deploy de Render (publicar solo al detectar un `git push`) **no se disparó automáticamente** las dos primeras veces que se probó, probablemente porque el repositorio se conectó a Render pasando la URL directamente (vía API), sin pasar por el flujo propio de autorización de la GitHub App de Render, que es quien instala el aviso automático (webhook) en el repositorio.
+**Solución adoptada:** tras cada `git push`, Claude llama también a `Render:trigger_deploy` para forzar la publicación manualmente. Esto es transparente para el usuario (no requiere ninguna acción suya) y forma parte del protocolo estándar de actualización descrito arriba — simplemente hay un paso técnico más en el lado de Claude.
+
 ## 11. Historial de cambios de este documento
 
 - **30/08/2026** — Creación del documento maestro, con el estado de la app tras completar Club, Plantilla, Alineación (con ABPs y arrastre) y Partidos (modo en vivo completo), más el buscador de jugadores por autocompletado.
@@ -314,3 +325,5 @@ Si en el futuro Claude no puede subir cambios (error de autenticación al hacer 
 - **31/08/2026** — Renombrada la app de "PIZARRA" a **"PIZARRA ANALISTA"** en todos los textos visibles (título de pestaña, login, registro, cabecera, pie de página). Documentada la existencia de un conector MCP de Supabase disponible para ejecutar cambios en la base de datos sin SQL manual (no conectado por defecto).
 - **31/08/2026** — Conectado el conector MCP de Supabase. Aplicada mediante `apply_migration` la migración pendiente de color/orden en `stat_columns` (antes preparada como script SQL manual). A partir de ahora los cambios de base de datos se ejecutan directamente, sin pasos manuales del usuario.
 - **31/08/2026** — **Alojamiento en producción configurado.** La app ya no se distribuye como archivo descargable: vive en **https://pizarra-analista.onrender.com**, servida por Render a partir del repositorio de GitHub **`danielpelecha/pizarra-analista`** (archivo `index.html` en la raíz). El conector MCP de Netlify falló repetidamente en la autorización (error `mcp_token_exchange_failed`) y se descartó; el conector MCP de Vercel se descartó por no tener herramientas de despliegue (solo lectura/depuración). El conector MCP de "Integración con GitHub" de Claude aparece conectado pero no expone herramientas de escritura (crear repos, subir archivos) — para poder publicar de verdad, el usuario generó un **Personal Access Token (classic)** de GitHub con permiso `repo`, que Claude usa desde la terminal (bash + git) para crear el repositorio y subir cambios directamente. Ver apartado 10 para el protocolo de actualización completo.
+- **01/09/2026** — Documento maestro conectado a la memoria del Proyecto vía integración GitHub de Claude Projects (sincronización con botón "Sync now", no automática por push — limitación conocida de Anthropic, ver apartado 10).
+- **01/09/2026** — Barra de navegación (`#appTopBar`) ahora fija arriba de la pantalla (`position:sticky`) en cualquier pestaña y posición de scroll. Confirmado y documentado que cambiar de pestaña nunca interrumpe el modo en vivo de Partidos (cronómetro, eventos) gracias a la arquitectura de una sola página. Añadido botón "🔄 Actualizar" con comprobación de versión (`<meta name="app-version">`) y cabeceras no-cache. Detectado que el auto-deploy de Render no se dispara solo tras un `git push` (probablemente por no haber pasado por el flujo de autorización de su GitHub App) — Claude ahora llama a `Render:trigger_deploy` tras cada push, de forma transparente para el usuario.
