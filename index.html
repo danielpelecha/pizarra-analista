@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-01-2">
+<meta name="app-version" content="2026-09-01-3">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -1398,6 +1398,16 @@ function playerLabel(p){
   return (p.num ? p.num + " · " : "") + displayAlias(p);
 }
 
+// Para la lista de búsqueda: nombre COMPLETO (para distinguir jugadores con el mismo
+// alias/nombre de pila), mostrando también entre paréntesis el alias que se usará
+// una vez seleccionado.
+function searchResultLabel(p){
+  if(!p) return "";
+  const alias = displayAlias(p);
+  const aliasNote = alias && alias !== p.name ? ` (alias: ${alias})` : "";
+  return (p.num ? p.num + " · " : "") + p.name + aliasNote;
+}
+
 function allTakenIds(exceptIndex, exceptGroup){
   const taken = new Set();
   lineupStarters.forEach((id,i)=>{ if(id && !(exceptGroup==="start" && i===exceptIndex)) taken.add(id); });
@@ -1470,7 +1480,7 @@ function buildPlayerPicker(idx, group, selectedId, excludeIds){
       const usedElsewhere = excludeIds.has(p.id) && p.id !== selectedId;
       const item = document.createElement("div");
       item.className = "autocomplete-item" + (usedElsewhere ? " disabled" : "");
-      item.textContent = playerLabel(p) + (usedElsewhere ? " · ya está en la alineación" : "");
+      item.textContent = searchResultLabel(p) + (usedElsewhere ? " · ya está en la alineación" : "");
       if(!usedElsewhere){
         item.addEventListener("click", ()=>{
           setSelection(p.id);
