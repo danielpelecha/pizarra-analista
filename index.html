@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-01-1">
+<meta name="app-version" content="2026-09-01-2">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -1117,7 +1117,7 @@ document.getElementById("addPlayerBtn").addEventListener("click", async ()=>{
   const payload = {
     club_id: currentClub.id,
     name,
-    alias: newPlayerAlias.value.trim(),
+    alias: newPlayerAlias.value.trim() || name.split(" ")[0],
     num: newPlayerNum.value.trim(),
     pos: newPlayerPos.value.trim(),
   };
@@ -1180,6 +1180,7 @@ function startEditRow(tr, player){
       pos: tr.querySelector(".edit-pos").value.trim(),
     };
     if(!updated.name){ showMsg(playersMsg, "El nombre no puede quedar vacío.", "error"); return; }
+    if(!updated.alias){ updated.alias = updated.name.split(" ")[0]; }
 
     const { error } = await supabase.from("players").update(updated).eq("id", player.id);
     if(error){ showMsg(playersMsg, "No se ha podido guardar: " + error.message, "error"); return; }
@@ -1384,10 +1385,17 @@ function resetStarterPositionsFromFormation(){
   starterPositions = slots.map(s=> ({ x:s.x, y:s.y, isGK:s.isGK, label:s.label }));
 }
 
+// Alias a mostrar de un jugador: el suyo propio si lo tiene, o si no, su primer
+// nombre (igual que hacía la herramienta HTML anterior). Nunca el nombre completo.
+function displayAlias(p){
+  if(!p) return "";
+  if(p.alias && p.alias.trim()) return p.alias.trim();
+  return (p.name || "").trim().split(" ")[0] || "";
+}
+
 function playerLabel(p){
   if(!p) return "";
-  const alias = p.alias || p.name;
-  return (p.num ? p.num + " · " : "") + alias;
+  return (p.num ? p.num + " · " : "") + displayAlias(p);
 }
 
 function allTakenIds(exceptIndex, exceptGroup){
@@ -1650,7 +1658,7 @@ function drawPitch(){
     ctx.textBaseline = "middle";
     ctx.fillText(player ? (player.num || "") : "", cx, cy+1);
 
-    const label = (player ? (player.alias || player.name) : slot.label).toUpperCase();
+    const label = (player ? displayAlias(player) : slot.label).toUpperCase();
     ctx.font = "bold 15px Arial";
     const tw = ctx.measureText(label).width;
     const padX=8, padY=4, chipH=15+2*padY, chipTop = cy+radius+6;
@@ -1696,7 +1704,7 @@ function drawPitch(){
     ctx.fillStyle = "#141414";
     ctx.font = "bold 17px Arial";
     ctx.textAlign = "left";
-    ctx.fillText((player.alias || player.name).toUpperCase(), x+42, y+15);
+    ctx.fillText(displayAlias(player).toUpperCase(), x+42, y+15);
     shown++;
   });
 }
@@ -2120,7 +2128,7 @@ function buildLiveChip(p, match, zone, isSentOff){
   if(zone === "on" && liveSelected === p.id) cls += " selected";
   if(isSentOff) cls += " sentoff";
   chip.className = cls;
-  chip.innerHTML = `<div class="circle">${escapeHtml(p.num || "?")}</div><div>${escapeHtml((p.alias||p.name).split(" ")[0])}</div>`;
+  chip.innerHTML = `<div class="circle">${escapeHtml(p.num || "?")}</div><div>${escapeHtml(displayAlias(p))}</div>`;
   if(isSentOff){ chip.title = "Expulsado"; return chip; }
   chip.addEventListener("click", ()=>{
     if(liveCambioOut){
@@ -2192,7 +2200,7 @@ function renderLive(match){
     players.forEach(p=>{
       const chip = document.createElement("div");
       chip.className = "live-chip" + (match.live.startersIds.includes(p.id) ? " selected" : "");
-      chip.innerHTML = `<div class="circle">${escapeHtml(p.num || "?")}</div><div>${escapeHtml((p.alias||p.name).split(" ")[0])}</div>`;
+      chip.innerHTML = `<div class="circle">${escapeHtml(p.num || "?")}</div><div>${escapeHtml(displayAlias(p))}</div>`;
       chip.addEventListener("click", ()=>{
         const idx = match.live.startersIds.indexOf(p.id);
         if(idx >= 0) match.live.startersIds.splice(idx,1); else match.live.startersIds.push(p.id);
@@ -2390,7 +2398,7 @@ function renderLive(match){
       } else {
         evLabel = labels[ev.type] || ev.type;
       }
-      text = evLabel + " — " + (p ? (p.alias||p.name) : "?");
+      text = evLabel + " — " + (p ? displayAlias(p) : "?");
     }
     row.innerHTML = `<span class="min">${ev.minute}'</span><span style="flex:1;">${escapeHtml(text)}</span>`;
     if(!match.live.finished){
@@ -2500,7 +2508,7 @@ function renderMatchDetail(){
     const tr = document.createElement("tr");
     const tdName = document.createElement("td");
     tdName.className = "name-td";
-    tdName.textContent = p.alias || p.name;
+    tdName.textContent = displayAlias(p);
     tr.appendChild(tdName);
     statColumns.forEach(col=>{
       const td = document.createElement("td");
