@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
 <title>PIZARRA ANALISTA — Gestión de equipos de fútbol</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="app-version" content="2026-09-01-1">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -135,6 +139,13 @@
   .msg.show{ display:block; }
 
   /* ---- Cabecera de la app (una vez dentro) ---- */
+  #appTopBar{
+    position:sticky;
+    top:0;
+    z-index:200;
+    background:#fff;
+    box-shadow:0 2px 8px rgba(13,27,62,0.08);
+  }
   .app-header{
     display:flex;
     align-items:center;
@@ -148,7 +159,7 @@
   .app-header .brand span{ font-weight:bold; color:var(--navy); font-size:18px; letter-spacing:1px; }
   .app-main{ padding:28px 24px; max-width:900px; margin:0 auto; }
 
-  /* ---- Pestañas de navegación de la app ---- */
+  /* ---- Pestañas de navegación de la app (dentro de #appTopBar, fijas arriba siempre) ---- */
   .tabbar{
     display:flex;
     flex-wrap:wrap;
@@ -537,21 +548,27 @@
 <!-- APP PRINCIPAL (una vez dentro, con club creado) -->
 <!-- ============================================================ -->
 <div id="screenApp" class="hidden">
-  <div class="app-header">
-    <div class="brand">
-      <img id="pizarraLogoHeader" alt="PIZARRA">
-      <span>PIZARRA ANALISTA</span>
+  <div id="appTopBar">
+    <div class="app-header">
+      <div class="brand">
+        <img id="pizarraLogoHeader" alt="PIZARRA">
+        <span>PIZARRA ANALISTA</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span id="updateCheckMsg" style="font-size:13px; color:var(--grey);"></span>
+        <button class="btn secondary" id="checkUpdateBtn" style="width:auto; margin-top:0;">🔄 Actualizar</button>
+        <button class="btn logout" id="logoutBtn">Cerrar sesión</button>
+      </div>
     </div>
-    <button class="btn logout" id="logoutBtn">Cerrar sesión</button>
-  </div>
 
-  <div class="tabbar">
-    <button class="tab-btn active" data-tab="club">🛡️ Club</button>
-    <button class="tab-btn" data-tab="plantilla">👥 Plantilla</button>
-    <button class="tab-btn soon" data-tab="alineacion">📋 Alineación</button>
-    <button class="tab-btn" data-tab="partidos">⚽ Partidos</button>
-    <button class="tab-btn soon" data-tab="ficha">🪪 Ficha de jugador</button>
-    <button class="tab-btn soon" data-tab="equipo">📊 Equipo</button>
+    <div class="tabbar">
+      <button class="tab-btn active" data-tab="club">🛡️ Club</button>
+      <button class="tab-btn" data-tab="plantilla">👥 Plantilla</button>
+      <button class="tab-btn soon" data-tab="alineacion">📋 Alineación</button>
+      <button class="tab-btn" data-tab="partidos">⚽ Partidos</button>
+      <button class="tab-btn soon" data-tab="ficha">🪪 Ficha de jugador</button>
+      <button class="tab-btn soon" data-tab="equipo">📊 Equipo</button>
+    </div>
   </div>
 
   <div class="app-main">
@@ -875,6 +892,32 @@ document.getElementById("signupBtn").addEventListener("click", async ()=>{
 document.getElementById("logoutBtn").addEventListener("click", async ()=>{
   await supabase.auth.signOut();
   showScreen(screenAuth);
+});
+
+// ---------------- Comprobar actualizaciones (botón "🔄 Actualizar") ----------------
+const CURRENT_APP_VERSION = document.querySelector('meta[name="app-version"]').content;
+const updateCheckMsg = document.getElementById("updateCheckMsg");
+
+document.getElementById("checkUpdateBtn").addEventListener("click", async ()=>{
+  updateCheckMsg.textContent = "Comprobando…";
+  try{
+    const res = await fetch(location.pathname + "?check=" + Date.now(), { cache: "no-store" });
+    const html = await res.text();
+    const match = html.match(/<meta name="app-version" content="([^"]+)"/);
+    const serverVersion = match ? match[1] : null;
+
+    if(!serverVersion){
+      updateCheckMsg.textContent = "No se ha podido comprobar.";
+    } else if(serverVersion !== CURRENT_APP_VERSION){
+      updateCheckMsg.textContent = "Hay una versión nueva. Actualizando…";
+      setTimeout(()=>{ location.reload(); }, 800);
+    } else {
+      updateCheckMsg.textContent = "Ya tienes la última versión ✓";
+      setTimeout(()=>{ updateCheckMsg.textContent = ""; }, 3000);
+    }
+  } catch(e){
+    updateCheckMsg.textContent = "No se ha podido comprobar.";
+  }
 });
 
 // ---------------- CREAR CLUB (primera vez) ----------------
