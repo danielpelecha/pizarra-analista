@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-6">
+<meta name="app-version" content="2026-09-02-7">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -262,7 +262,7 @@
   .lineup-pitch-col{ flex:1 1 380px; text-align:center; }
   #pitchCanvas{
     width:100%;
-    max-width:480px;
+    max-width:720px;
     border:2px solid var(--border);
     border-radius:10px;
     background:#1f8a3c;
@@ -352,7 +352,7 @@
 
   /* ---- Partidos ---- */
   .matches-layout{ display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; }
-  .matches-side{ flex:1 1 260px; max-width:300px; }
+  .matches-side{ flex:1 1 260px; max-width:300px; position:sticky; top:12px; align-self:flex-start; }
   .matches-detail{ flex:2 1 480px; min-width:0; }
   .match-row{
     display:flex; justify-content:space-between; align-items:center;
