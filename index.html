@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-8">
+<meta name="app-version" content="2026-09-02-9">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -351,9 +351,9 @@
   }
 
   /* ---- Partidos ---- */
-  .matches-layout{ display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; }
-  .matches-side{ flex:1 1 200px; max-width:220px; position:sticky; top:12px; align-self:flex-start; }
-  .matches-detail{ flex:4 1 480px; min-width:0; }
+  .matches-top-row{ display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; margin-bottom:18px; }
+  .matches-side{ flex:1 1 200px; max-width:220px; }
+  .matches-form-col{ flex:4 1 480px; min-width:0; }
   .match-row{
     display:flex; justify-content:space-between; align-items:center;
     padding:10px 12px; border:2px solid var(--border); border-radius:8px;
@@ -365,6 +365,9 @@
     background:var(--navy); color:#fff; white-space:nowrap; margin-left:8px;
   }
   .match-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; margin-bottom:6px; }
+  @media (min-width: 900px){
+    .match-grid{ grid-template-columns:repeat(4, 1fr); }
+  }
   .match-grid .full{ grid-column: 1 / -1; }
   .match-grid label{ font-size:13px; margin-top:6px; }
   .match-grid input, .match-grid select{
@@ -812,17 +815,16 @@
     <div class="tab-panel hidden" id="tabPanelPartidos">
       <div class="card wide">
         <h1 style="text-align:left;">Partidos</h1>
-        <div class="matches-layout">
+        <div class="matches-top-row">
           <div class="matches-side">
             <button class="btn" id="newMatchBtn" style="margin-top:0;">➕ Nuevo partido</button>
             <p class="hint">Selecciona un partido para introducir o revisar sus estadísticas.</p>
             <div id="matchList"></div>
           </div>
-          <div class="matches-detail">
+          <div class="matches-form-col">
             <div id="matchDetailEmpty" class="hint">Crea o selecciona un partido a la izquierda para empezar.</div>
-            <div id="matchDetailContent" class="hidden">
+            <div id="matchFormRow" class="hidden">
               <div class="match-grid" id="matchMetaForm"></div>
-
               <div style="margin:14px 0;">
                 <button class="btn secondary" id="addStatColBtn" style="width:auto; margin-top:0;">➕ Añadir estadística</button>
                 <button class="btn secondary" id="toggleStatManagerBtn" style="width:auto; margin-top:0; margin-left:8px;">🎨 Organizar estadísticas</button>
@@ -831,21 +833,22 @@
                   <div id="statManagerList"></div>
                 </div>
               </div>
-
-              <div id="liveSection" class="live-section"></div>
-
-              <p class="hint" style="margin-top:16px;">Minutos, goles, asistencias, ocasiones y tarjetas se rellenan solos si usas el modo en vivo de arriba. Las estadísticas personalizadas se anotan aquí a mano.</p>
-              <div style="margin-top:6px; overflow-x:auto;">
-                <table class="data-table" id="statsTable">
-                  <thead><tr id="statsTableHead"></tr></thead>
-                  <tbody id="statsTableBody"></tbody>
-                </table>
-              </div>
-              <div id="teamStatsPanel" class="team-stats-panel hidden"></div>
-              <button class="btn" id="deleteMatchBtn" style="width:auto; margin-top:16px; background:var(--danger);">🗑 Eliminar partido</button>
-              <div id="matchMsg" class="msg"></div>
             </div>
           </div>
+        </div>
+        <div id="matchDetailContent" class="hidden">
+          <div id="liveSection" class="live-section"></div>
+
+          <p class="hint" style="margin-top:16px;">Minutos, goles, asistencias, ocasiones y tarjetas se rellenan solos si usas el modo en vivo de arriba. Las estadísticas personalizadas se anotan aquí a mano.</p>
+          <div style="margin-top:6px; overflow-x:auto;">
+            <table class="data-table" id="statsTable">
+              <thead><tr id="statsTableHead"></tr></thead>
+              <tbody id="statsTableBody"></tbody>
+            </table>
+          </div>
+          <div id="teamStatsPanel" class="team-stats-panel hidden"></div>
+          <button class="btn" id="deleteMatchBtn" style="width:auto; margin-top:16px; background:var(--danger);">🗑 Eliminar partido</button>
+          <div id="matchMsg" class="msg"></div>
         </div>
       </div>
     </div>
@@ -2062,6 +2065,7 @@ function unsubscribeMatchRealtime(){
 const matchListEl = document.getElementById("matchList");
 const matchDetailEmpty = document.getElementById("matchDetailEmpty");
 const matchDetailContent = document.getElementById("matchDetailContent");
+const matchFormRow = document.getElementById("matchFormRow");
 const matchMetaForm = document.getElementById("matchMetaForm");
 const statsTableHead = document.getElementById("statsTableHead");
 const statsTableBody = document.getElementById("statsTableBody");
@@ -2980,11 +2984,13 @@ function renderTeamStatsPanel(match){
 function renderMatchDetail(){
   if(!currentMatch){
     matchDetailEmpty.classList.remove("hidden");
+    matchFormRow.classList.add("hidden");
     matchDetailContent.classList.add("hidden");
     stopLiveTicker();
     return;
   }
   matchDetailEmpty.classList.add("hidden");
+  matchFormRow.classList.remove("hidden");
   matchDetailContent.classList.remove("hidden");
   ensureStatsForMatch(currentMatch);
   liveSelected = null; liveCambioOut = null;
