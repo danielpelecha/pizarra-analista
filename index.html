@@ -2662,13 +2662,19 @@ function renderLive(match){
     } else {
       const p = players.find(x=>x.id===ev.playerId);
       let evLabel;
-      if(ev.type === "custom"){
+      if(ev.type === "team_stat"){
         const col = statColumns.find(c=> c.key === ev.key);
-        evLabel = "📌 " + (col ? col.label : ev.key);
+        evLabel = "⚠️ " + (col ? col.label : ev.key);
+        text = evLabel + " — Equipo";
       } else {
-        evLabel = labels[ev.type] || ev.type;
+        if(ev.type === "custom"){
+          const col = statColumns.find(c=> c.key === ev.key);
+          evLabel = "📌 " + (col ? col.label : ev.key);
+        } else {
+          evLabel = labels[ev.type] || ev.type;
+        }
+        text = evLabel + " — " + (p ? displayAlias(p) : "?");
       }
-      text = evLabel + " — " + (p ? displayAlias(p) : "?");
     }
     row.innerHTML = `<span class="min">${ev.minute}'</span><span style="flex:1;">${escapeHtml(text)}</span>`;
     if(!match.live.finished){
