@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-9">
+<meta name="app-version" content="2026-09-02-10">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -352,7 +352,7 @@
 
   /* ---- Partidos ---- */
   .matches-top-row{ display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; margin-bottom:18px; }
-  .matches-side{ flex:1 1 200px; max-width:220px; }
+  .matches-side{ flex:1 1 260px; max-width:300px; }
   .matches-form-col{ flex:4 1 480px; min-width:0; }
   .match-row{
     display:flex; justify-content:space-between; align-items:center;
@@ -1814,7 +1814,7 @@ function getCrestImage(){
 
 function pitchGeom(){
   const W = pitchCanvas.width, H = pitchCanvas.height;
-  const HEADER_H = 260, PITCH_TOP = HEADER_H + 10, PITCH_BOTTOM = H - 560, PITCH_LEFT = 30, PITCH_RIGHT = W - 30;
+  const HEADER_H = 195, PITCH_TOP = HEADER_H + 8, PITCH_BOTTOM = H - 560, PITCH_LEFT = 30, PITCH_RIGHT = W - 30;
   const SUBS_TOP = H - 540;
   return { W, H, HEADER_H, PITCH_TOP, PITCH_BOTTOM, PITCH_LEFT, PITCH_RIGHT, SUBS_TOP };
 }
@@ -1833,35 +1833,35 @@ function drawPitch(){
 
   const crestImg = getCrestImage();
   if(crestImg && crestImg.complete && crestImg.naturalWidth){
-    const crestH = 130;
+    const crestH = 95;
     const ratio = crestH / crestImg.naturalHeight;
     const cw = crestImg.naturalWidth * ratio;
-    ctx.drawImage(crestImg, (W-cw)/2, 18, cw, crestH);
+    ctx.drawImage(crestImg, (W-cw)/2, 10, cw, crestH);
   }
 
   ctx.fillStyle = "#0d1b3e";
-  ctx.font = "bold 30px Arial";
+  ctx.font = "bold 26px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
-  ctx.fillText(((currentClub && currentClub.name) || "MI CLUB").toUpperCase(), W/2, 175);
+  ctx.fillText(((currentClub && currentClub.name) || "MI CLUB").toUpperCase(), W/2, 128);
 
   const fecha = fmtFecha(matchFecha.value);
   const hora = matchHora.value;
   const rival = matchRival.value || "RIVAL POR CONFIRMAR";
   const condicion = matchCondicion.value;
   let infoText = `${fecha}   ·   ${hora ? hora+"h" : ""}   ·   ${condicion} vs ${rival.toUpperCase()}`;
-  let infoSize = 24;
+  let infoSize = 22;
   ctx.font = `bold ${infoSize}px Arial`;
   while(ctx.measureText(infoText).width > W-60 && infoSize>14){
     infoSize -= 1;
     ctx.font = `bold ${infoSize}px Arial`;
   }
   ctx.fillStyle = "#141414";
-  ctx.fillText(infoText, W/2, 210);
+  ctx.fillText(infoText, W/2, 158);
 
-  ctx.font = "18px Arial";
+  ctx.font = "16px Arial";
   ctx.fillStyle = "#787878";
-  ctx.fillText(formationSelect.value, W/2, 240);
+  ctx.fillText(formationSelect.value, W/2, 182);
 
   // ---- Campo ----
   ctx.fillStyle = "#1f8a3c";
