@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-7">
+<meta name="app-version" content="2026-09-02-8">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -352,8 +352,8 @@
 
   /* ---- Partidos ---- */
   .matches-layout{ display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; }
-  .matches-side{ flex:1 1 260px; max-width:300px; position:sticky; top:12px; align-self:flex-start; }
-  .matches-detail{ flex:2 1 480px; min-width:0; }
+  .matches-side{ flex:1 1 200px; max-width:220px; position:sticky; top:12px; align-self:flex-start; }
+  .matches-detail{ flex:4 1 480px; min-width:0; }
   .match-row{
     display:flex; justify-content:space-between; align-items:center;
     padding:10px 12px; border:2px solid var(--border); border-radius:8px;
@@ -1811,7 +1811,7 @@ function getCrestImage(){
 
 function pitchGeom(){
   const W = pitchCanvas.width, H = pitchCanvas.height;
-  const HEADER_H = 300, PITCH_TOP = HEADER_H + 20, PITCH_BOTTOM = H - 560, PITCH_LEFT = 30, PITCH_RIGHT = W - 30;
+  const HEADER_H = 260, PITCH_TOP = HEADER_H + 10, PITCH_BOTTOM = H - 560, PITCH_LEFT = 30, PITCH_RIGHT = W - 30;
   const SUBS_TOP = H - 540;
   return { W, H, HEADER_H, PITCH_TOP, PITCH_BOTTOM, PITCH_LEFT, PITCH_RIGHT, SUBS_TOP };
 }
