@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-2">
+<meta name="app-version" content="2026-09-02-3">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -402,15 +402,30 @@
   }
   .scoreboard-row .team-name{ color:#fff; font-size:14px; font-weight:bold; max-width:150px; text-align:center; }
   .scoreboard-row .score{ color:#fff; font-size:26px; font-weight:bold; }
-  .kpi-row{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .kpi-group-label{
+    font-size:10px; text-transform:uppercase; letter-spacing:0.4px; margin:10px 0 4px; font-weight:bold;
+  }
+  .kpi-label-positiva{ color:#9fe1cb; }
+  .kpi-label-negativa{ color:#f0a3a3; }
+  .kpi-row{ display:flex; gap:8px; flex-wrap:wrap; }
   .kpi-card{
     flex:1; min-width:90px; background:rgba(255,255,255,0.08); border-radius:8px;
     padding:8px; text-align:center;
   }
   .kpi-card .kpi-value{ color:#fff; font-size:20px; font-weight:bold; }
   .kpi-card .kpi-label{ color:#c7d2e0; font-size:11px; }
+  .kpi-card.kpi-success{ background:rgba(29,158,117,0.18); }
+  .kpi-card.kpi-success .kpi-value{ color:#9fe1cb; }
+  .kpi-card.kpi-danger{ background:rgba(226,75,74,0.18); }
   .kpi-card.kpi-danger .kpi-value{ color:#f0a3a3; }
-  .kpi-card.kpi-muted .kpi-value{ color:#8f9bb5; }
+  .kpi-card.kpi-add{
+    background:transparent; border:1px dashed rgba(255,255,255,0.3); cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .kpi-card.kpi-add:hover{ background:rgba(255,255,255,0.06); }
+  .kpi-card.kpi-add i{ font-size:16px; color:#c7d2e0; }
+  .kpi-card.kpi-add .kpi-add-plus{ font-size:18px; color:#c7d2e0; line-height:1; font-weight:bold; }
+  .kpi-card.kpi-add .kpi-label{ margin-top:2px; }
   .live-btn{
     border:none; border-radius:8px; font-weight:bold; cursor:pointer;
     padding:10px 16px; font-size:15px; color:#fff; background:var(--blue);
@@ -2460,19 +2475,61 @@ function startLiveTicker(){
 }
 function stopLiveTicker(){ if(liveTickerInterval){ clearInterval(liveTickerInterval); liveTickerInterval = null; } }
 
+function totalForStatColumn(match, col){
+  if(col.scope === "team") return (match.stats.__team__ && match.stats.__team__[col.key]) || 0;
+  let total = 0;
+  players.forEach(p=>{ if(match.stats[p.id]) total += (match.stats[p.id][col.key] || 0); });
+  return total;
+}
+
+// Crea una estadística nueva (mismo flujo que "➕ Añadir estadística" en Organizar estadísticas)
+// y la marca directamente como destacada en el grupo indicado, para el hueco "+" del cuadro de mando.
+async function promptNewStatColumn(presetGrupo){
+  const label = prompt("Nombre de la nueva estadística (ej: Regates, Faltas recibidas, MVP...)");
+  if(!label) return null;
+  const scopeAnswer = (prompt(
+    "¿Qué tipo de estadística es?\n\n" +
+    "Escribe 1, 2 o 3:\n" +
+    "1 = Normal (eliges un jugador cada vez que la anotas)\n" +
+    "2 = Portero (un solo toque, se anota sola en el portero que esté en el campo)\n" +
+    "3 = Equipo (un solo toque, sin jugador — para lo que hace/recibe el rival)",
+    "1"
+  ) || "1").trim();
+  const scope = scopeAnswer === "2" ? "goalkeeper" : scopeAnswer === "3" ? "team" : "player";
+  const key = slugify(label) + "_" + Date.now().toString(36).slice(-4);
+  const nextOrden = statColumns.length ? Math.max(...statColumns.map(c=>c.orden||0)) + 1 : 1;
+  const color = presetGrupo === "negativa" ? "#b91c1c" : "#15803d";
+  const { data, error } = await supabase.from("stat_columns")
+    .insert({ club_id: currentClub.id, key, label, color, orden: nextOrden, scope, destacada: true, grupo: presetGrupo })
+    .select().single();
+  if(error){ alert("No se ha podido añadir la estadística: " + error.message); return null; }
+  statColumns.push(data);
+  if(currentMatch) ensureStatsForMatch(currentMatch);
+  return data;
+}
+
 function computeMatchDashboard(match){
-  const events = (match.live && match.live.events) || [];
   const teamCols = statColumns.filter(c=> c.scope === "team");
   const golContraCol = teamCols.find(c=> /gol/i.test(c.label) && /contra/i.test(c.label));
-  const perdidasCol = statColumns.find(c=> /perdid/i.test(c.label));
-  let golesFor = 0, golesAgainst = 0, ocasiones = 0, perdidas = 0;
-  events.forEach(ev=>{
-    if(ev.type === "gol") golesFor++;
-    else if(ev.type === "ocasion") ocasiones++;
-    else if(ev.type === "team_stat" && golContraCol && ev.key === golContraCol.key) golesAgainst++;
-    else if(ev.type === "custom" && perdidasCol && ev.key === perdidasCol.key) perdidas++;
-  });
-  return { golesFor, golesAgainst, ocasiones, perdidas };
+  const golesCol = statColumns.find(c=> c.key === "goles");
+  const golesFor = golesCol ? totalForStatColumn(match, golesCol) : 0;
+  const golesAgainst = golContraCol ? totalForStatColumn(match, golContraCol) : 0;
+  const destacadas = statColumns.filter(c=> c.destacada && (c.grupo === "positiva" || c.grupo === "negativa"));
+  const positivas = destacadas.filter(c=> c.grupo === "positiva").map(c=> ({ label: c.label, value: totalForStatColumn(match, c) }));
+  const negativas = destacadas.filter(c=> c.grupo === "negativa").map(c=> ({ label: c.label, value: totalForStatColumn(match, c) }));
+  return { golesFor, golesAgainst, positivas, negativas };
+}
+
+function kpiRowHtml(items, tono, grupo){
+  const cards = items.slice(0, 3).map(it=> `
+    <div class="kpi-card kpi-${tono}"><div class="kpi-value">${it.value}</div><div class="kpi-label">${escapeHtml(it.label)}</div></div>
+  `).join("");
+  const huecos = Math.max(0, 3 - items.length);
+  let addTile = "";
+  if(huecos > 0){
+    addTile = `<div class="kpi-card kpi-add" data-add-grupo="${grupo}"><div class="kpi-add-plus">+</div><div class="kpi-label">Añadir</div></div>`;
+  }
+  return cards + addTile;
 }
 
 function renderMatchDashboard(match){
@@ -2493,12 +2550,17 @@ function renderMatchDashboard(match){
       <span class="score">${golesIzq} - ${golesDer}</span>
       <span class="team-name">${escapeHtml(derecha)}</span>
     </div>
-    <div class="kpi-row">
-      <div class="kpi-card"><div class="kpi-value">${d.ocasiones}</div><div class="kpi-label">Ocasiones</div></div>
-      <div class="kpi-card kpi-danger"><div class="kpi-value">${d.perdidas}</div><div class="kpi-label">Pérdidas</div></div>
-      <div class="kpi-card kpi-muted"><div class="kpi-value">—</div><div class="kpi-label">ABP anotada</div></div>
-    </div>
+    <div class="kpi-group-label kpi-label-positiva">Positivas</div>
+    <div class="kpi-row">${kpiRowHtml(d.positivas, "success", "positiva")}</div>
+    <div class="kpi-group-label kpi-label-negativa">Negativas</div>
+    <div class="kpi-row">${kpiRowHtml(d.negativas, "danger", "negativa")}</div>
   `;
+  wrap.querySelectorAll(".kpi-add").forEach(tile=>{
+    tile.addEventListener("click", async ()=>{
+      const nueva = await promptNewStatColumn(tile.dataset.addGrupo);
+      if(nueva){ recomputeStatsFromLive(match); renderLive(match); renderStatsTableOnly(match); saveMatch(match); }
+    });
+  });
   return wrap;
 }
 
