@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-4">
+<meta name="app-version" content="2026-09-02-5">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -166,7 +166,7 @@
   .app-header .brand{ display:flex; align-items:center; gap:10px; }
   .app-header .brand img{ width:34px; height:34px; }
   .app-header .brand span{ font-weight:bold; color:var(--navy); font-size:18px; letter-spacing:1px; }
-  .app-main{ padding:28px 24px; max-width:900px; margin:0 auto; }
+  .app-main{ padding:28px 24px; max-width:min(1600px, 96vw); margin:0 auto; }
 
   /* ---- Pestañas de navegación de la app (dentro de #appTopBar, fijas arriba siempre) ---- */
   .tabbar{
@@ -400,18 +400,18 @@
   .scoreboard-row{
     display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap;
   }
-  .scoreboard-row .team-name{ color:#fff; font-size:14px; font-weight:bold; max-width:150px; text-align:center; }
+  .scoreboard-row .team-name{ color:#fff; font-size:16px; font-weight:bold; max-width:220px; text-align:center; }
   .scoreboard-row .score{ color:#fff; font-size:26px; font-weight:bold; }
-  .scoreboard-row .score-minute{ color:#9fe1cb; font-size:10px; margin-left:4px; }
-  .kpi-pill-row{ display:flex; gap:4px; flex-wrap:wrap; justify-content:center; align-items:center; margin-top:6px; }
+  .scoreboard-row .score-minute{ color:#9fe1cb; font-size:13px; margin-left:4px; }
+  .kpi-pill-row{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; align-items:center; margin-top:8px; }
   .kpi-pill{
-    font-size:9px; padding:2px 6px; border-radius:5px; white-space:nowrap;
+    font-size:13px; padding:4px 10px; border-radius:6px; white-space:nowrap;
   }
   .kpi-pill-success{ background:rgba(29,158,117,0.22); color:#9fe1cb; }
   .kpi-pill-danger{ background:rgba(226,75,74,0.22); color:#f0a3a3; }
   .kpi-pill-add{
     background:rgba(255,255,255,0.08); border:1px dashed rgba(255,255,255,0.35);
-    cursor:pointer; padding:2px 7px; font-weight:bold;
+    cursor:pointer; padding:4px 11px; font-weight:bold;
   }
   .kpi-pill-add:hover{ background:rgba(255,255,255,0.15); }
   .kpi-divider{ width:1px; align-self:stretch; background:rgba(255,255,255,0.15); margin:0 2px; }
@@ -422,34 +422,43 @@
   /* ---- Layout apaisado (movil girado, tablet, ordenador) ---- */
   .live-main-grid{ display:block; }
   @media (orientation: landscape) and (min-width: 640px){
-    .live-main-grid{ display:grid; grid-template-columns: 1.5fr 1fr; gap:10px; align-items:start; }
+    .live-main-grid{ display:grid; grid-template-columns: 1.6fr 1.4fr; gap:14px; align-items:start; }
     .live-actions-col{ position: sticky; top: 8px; }
+    .live-feed-col{ grid-column: 1 / -1; max-height:40vh; overflow-y:auto; border-top:1px solid var(--border); padding-top:10px; margin-top:6px; }
   }
-  .live-players-col .live-grid{ grid-template-columns:repeat(auto-fill, minmax(52px,1fr)); gap:4px; }
-  .live-players-col .live-chip{ padding:4px 1px; }
-  .live-players-col .live-chip .circle{ width:16px; height:16px; font-size:8px; line-height:16px; margin:0 auto 1px; }
-  .live-players-col .live-chip > div:last-child{ font-size:8px; }
+  @media (orientation: landscape) and (min-width: 1000px){
+    .live-main-grid{ grid-template-columns: 1.7fr 1.4fr 1.1fr; }
+    .live-feed-col{ grid-column: auto; border-top:none; border-left:1px solid var(--border); padding-left:14px; padding-top:0; margin-top:0; max-height:80vh; position:sticky; top:8px; }
+  }
+  .live-players-col .live-grid{ grid-template-columns:repeat(auto-fill, minmax(64px,1fr)); gap:6px; }
+  .live-players-col .live-chip{ padding:6px 2px; }
+  .live-players-col .live-chip .circle{ width:24px; height:24px; font-size:12px; line-height:24px; margin:0 auto 2px; color:#fff; }
+  .live-players-col .live-chip > div:last-child{ font-size:12px; font-weight:bold; }
+  .live-chip .circle.pos-gk{ background:#ba7517; }
+  .live-chip .circle.pos-def{ background:#185fa5; }
+  .live-chip .circle.pos-fwd{ background:#3b6d11; }
+  .live-chip .circle.pos-neutral{ background:#5f5e5a; }
   .selected-player-pill{
-    background:var(--lightblue); border-radius:6px; padding:5px 8px; text-align:center;
-    margin-bottom:6px; font-weight:bold; color:var(--navy); font-size:12px;
+    background:var(--lightblue); border-radius:6px; padding:6px 10px; text-align:center;
+    margin-bottom:8px; font-weight:bold; color:var(--navy); font-size:14px;
   }
-  .action-group-label{ font-size:10px; font-weight:bold; text-transform:uppercase; margin:6px 0 3px; letter-spacing:0.3px; }
+  .action-group-label{ font-size:11px; font-weight:bold; text-transform:uppercase; margin:8px 0 4px; letter-spacing:0.3px; }
   .action-group-label.positiva{ color:var(--success); }
   .action-group-label.negativa{ color:var(--danger); }
-  .actions-compact{ display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }
+  .actions-compact{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
   .live-action-btn-compact{
     border:none; border-radius:6px; font-weight:bold; cursor:pointer;
-    padding:6px 2px; font-size:10px; color:#fff; line-height:1.3;
+    padding:9px 3px; font-size:12px; color:#fff; line-height:1.3;
   }
   .live-action-btn-add{
-    background:transparent; cursor:pointer; border-radius:6px; padding:6px 2px;
-    font-size:14px; font-weight:bold; border:1px dashed currentColor;
+    background:transparent; cursor:pointer; border-radius:6px; padding:9px 3px;
+    font-size:16px; font-weight:bold; border:1px dashed currentColor;
   }
   .live-action-btn-add.positiva{ color:var(--success); }
   .live-action-btn-add.negativa{ color:var(--danger); }
   .cambio-btn-full{
-    width:100%; margin-top:6px; border:none; border-radius:6px; font-weight:bold;
-    cursor:pointer; padding:7px 2px; font-size:11px; color:#fff; background:var(--grey);
+    width:100%; margin-top:8px; border:none; border-radius:6px; font-weight:bold;
+    cursor:pointer; padding:9px 3px; font-size:12px; color:#fff; background:var(--grey);
   }
   .live-btn{
     border:none; border-radius:8px; font-weight:bold; cursor:pointer;
@@ -2417,13 +2426,24 @@ function recomputeStatsFromLive(match){
   Object.keys(teamCounters).forEach(key=>{ match.stats.__team__[key] = teamCounters[key]; });
 }
 
+// Clasifica la posición (texto libre en la Plantilla) en un grupo de color para
+// reconocer de un vistazo porteros, defensivos y ofensivos en la pantalla de partido.
+// Prioridad: portero > ofensivo > defensivo; si no coincide con nada, queda neutro.
+function positionColorClass(pos){
+  const p = (pos || "").toLowerCase();
+  if(p.includes("portero")) return "pos-gk";
+  if(p.includes("delantero") || p.includes("ofensivo") || p.includes("extremo")) return "pos-fwd";
+  if(p.includes("defensa") || p.includes("defensivo") || p.includes("central") || p.includes("carrilero") || p.includes("lateral")) return "pos-def";
+  return "pos-neutral";
+}
+
 function buildLiveChip(p, match, zone, isSentOff){
   const chip = document.createElement("div");
   let cls = "live-chip";
   if(zone === "on" && liveSelected === p.id) cls += " selected";
   if(isSentOff) cls += " sentoff";
   chip.className = cls;
-  chip.innerHTML = `<div class="circle">${escapeHtml(p.num || "?")}</div><div>${escapeHtml(displayAlias(p))}</div>`;
+  chip.innerHTML = `<div class="circle ${positionColorClass(p.pos)}">${escapeHtml(p.num || "?")}</div><div>${escapeHtml(displayAlias(p))}</div>`;
   if(isSentOff){ chip.title = "Expulsado"; return chip; }
   chip.addEventListener("click", ()=>{
     if(liveCambioOut){
@@ -2591,6 +2611,7 @@ function renderLive(match){
   if(!liveSection) return;
   ensureLive(match);
   liveSection.innerHTML = "";
+  let liveMainGridRef = null;
 
   if(!match.live.started){
     const title = document.createElement("div");
@@ -2726,6 +2747,7 @@ function renderLive(match){
 
     const mainGrid = document.createElement("div");
     mainGrid.className = "live-main-grid";
+    liveMainGridRef = mainGrid;
 
     // ---- Columna izquierda: jugadores ----
     const playersCol = document.createElement("div");
@@ -2831,10 +2853,11 @@ function renderLive(match){
     liveSection.appendChild(mainGrid);
   }
 
+  const feedWrap = document.createElement("div");
   const feedLbl = document.createElement("div");
   feedLbl.style.cssText = "font-weight:bold;color:var(--navy);margin-top:6px;";
   feedLbl.textContent = "Registro del partido";
-  liveSection.appendChild(feedLbl);
+  feedWrap.appendChild(feedLbl);
   const feed = document.createElement("div");
   feed.style.marginTop = "6px";
   const labels = { gol:"⚽ Gol", asistencia:"🅰️ Asistencia", ocasion:"🎯 Ocasión", amarilla:"🟨 Amarilla", roja:"🟥 Roja" };
@@ -2886,7 +2909,13 @@ function renderLive(match){
     empty.textContent = "Todavía no hay eventos registrados.";
     feed.appendChild(empty);
   }
-  liveSection.appendChild(feed);
+  feedWrap.appendChild(feed);
+  if(match.live.finished || !liveMainGridRef){
+    liveSection.appendChild(feedWrap);
+  } else {
+    feedWrap.className = "live-feed-col";
+    liveMainGridRef.appendChild(feedWrap);
+  }
 }
 
 function renderStatsTableOnly(match){
