@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-3">
+<meta name="app-version" content="2026-09-02-4">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -402,30 +402,55 @@
   }
   .scoreboard-row .team-name{ color:#fff; font-size:14px; font-weight:bold; max-width:150px; text-align:center; }
   .scoreboard-row .score{ color:#fff; font-size:26px; font-weight:bold; }
-  .kpi-group-label{
-    font-size:10px; text-transform:uppercase; letter-spacing:0.4px; margin:10px 0 4px; font-weight:bold;
+  .scoreboard-row .score-minute{ color:#9fe1cb; font-size:10px; margin-left:4px; }
+  .kpi-pill-row{ display:flex; gap:4px; flex-wrap:wrap; justify-content:center; align-items:center; margin-top:6px; }
+  .kpi-pill{
+    font-size:9px; padding:2px 6px; border-radius:5px; white-space:nowrap;
   }
-  .kpi-label-positiva{ color:#9fe1cb; }
-  .kpi-label-negativa{ color:#f0a3a3; }
-  .kpi-row{ display:flex; gap:8px; flex-wrap:wrap; }
-  .kpi-card{
-    flex:1; min-width:90px; background:rgba(255,255,255,0.08); border-radius:8px;
-    padding:8px; text-align:center;
+  .kpi-pill-success{ background:rgba(29,158,117,0.22); color:#9fe1cb; }
+  .kpi-pill-danger{ background:rgba(226,75,74,0.22); color:#f0a3a3; }
+  .kpi-pill-add{
+    background:rgba(255,255,255,0.08); border:1px dashed rgba(255,255,255,0.35);
+    cursor:pointer; padding:2px 7px; font-weight:bold;
   }
-  .kpi-card .kpi-value{ color:#fff; font-size:20px; font-weight:bold; }
-  .kpi-card .kpi-label{ color:#c7d2e0; font-size:11px; }
-  .kpi-card.kpi-success{ background:rgba(29,158,117,0.18); }
-  .kpi-card.kpi-success .kpi-value{ color:#9fe1cb; }
-  .kpi-card.kpi-danger{ background:rgba(226,75,74,0.18); }
-  .kpi-card.kpi-danger .kpi-value{ color:#f0a3a3; }
+  .kpi-pill-add:hover{ background:rgba(255,255,255,0.15); }
+  .kpi-divider{ width:1px; align-self:stretch; background:rgba(255,255,255,0.15); margin:0 2px; }
   .kpi-card.kpi-add{
     background:transparent; border:1px dashed rgba(255,255,255,0.3); cursor:pointer;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
   }
-  .kpi-card.kpi-add:hover{ background:rgba(255,255,255,0.06); }
-  .kpi-card.kpi-add i{ font-size:16px; color:#c7d2e0; }
-  .kpi-card.kpi-add .kpi-add-plus{ font-size:18px; color:#c7d2e0; line-height:1; font-weight:bold; }
-  .kpi-card.kpi-add .kpi-label{ margin-top:2px; }
+  /* ---- Layout apaisado (movil girado, tablet, ordenador) ---- */
+  .live-main-grid{ display:block; }
+  @media (orientation: landscape) and (min-width: 640px){
+    .live-main-grid{ display:grid; grid-template-columns: 1.5fr 1fr; gap:10px; align-items:start; }
+    .live-actions-col{ position: sticky; top: 8px; }
+  }
+  .live-players-col .live-grid{ grid-template-columns:repeat(auto-fill, minmax(52px,1fr)); gap:4px; }
+  .live-players-col .live-chip{ padding:4px 1px; }
+  .live-players-col .live-chip .circle{ width:16px; height:16px; font-size:8px; line-height:16px; margin:0 auto 1px; }
+  .live-players-col .live-chip > div:last-child{ font-size:8px; }
+  .selected-player-pill{
+    background:var(--lightblue); border-radius:6px; padding:5px 8px; text-align:center;
+    margin-bottom:6px; font-weight:bold; color:var(--navy); font-size:12px;
+  }
+  .action-group-label{ font-size:10px; font-weight:bold; text-transform:uppercase; margin:6px 0 3px; letter-spacing:0.3px; }
+  .action-group-label.positiva{ color:var(--success); }
+  .action-group-label.negativa{ color:var(--danger); }
+  .actions-compact{ display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }
+  .live-action-btn-compact{
+    border:none; border-radius:6px; font-weight:bold; cursor:pointer;
+    padding:6px 2px; font-size:10px; color:#fff; line-height:1.3;
+  }
+  .live-action-btn-add{
+    background:transparent; cursor:pointer; border-radius:6px; padding:6px 2px;
+    font-size:14px; font-weight:bold; border:1px dashed currentColor;
+  }
+  .live-action-btn-add.positiva{ color:var(--success); }
+  .live-action-btn-add.negativa{ color:var(--danger); }
+  .cambio-btn-full{
+    width:100%; margin-top:6px; border:none; border-radius:6px; font-weight:bold;
+    cursor:pointer; padding:7px 2px; font-size:11px; color:#fff; background:var(--grey);
+  }
   .live-btn{
     border:none; border-radius:8px; font-weight:bold; cursor:pointer;
     padding:10px 16px; font-size:15px; color:#fff; background:var(--blue);
@@ -2520,16 +2545,12 @@ function computeMatchDashboard(match){
   return { golesFor, golesAgainst, positivas, negativas };
 }
 
-function kpiRowHtml(items, tono, grupo){
-  const cards = items.slice(0, 3).map(it=> `
-    <div class="kpi-card kpi-${tono}"><div class="kpi-value">${it.value}</div><div class="kpi-label">${escapeHtml(it.label)}</div></div>
+function kpiPillsHtml(items, tono, grupo){
+  const pills = items.map(it=> `
+    <div class="kpi-pill kpi-pill-${tono}"><b>${it.value}</b> ${escapeHtml(it.label)}</div>
   `).join("");
-  const huecos = Math.max(0, 3 - items.length);
-  let addTile = "";
-  if(huecos > 0){
-    addTile = `<div class="kpi-card kpi-add" data-add-grupo="${grupo}"><div class="kpi-add-plus">+</div><div class="kpi-label">Añadir</div></div>`;
-  }
-  return cards + addTile;
+  const addPill = `<div class="kpi-pill kpi-pill-add kpi-pill-${tono}" data-add-grupo="${grupo}">+</div>`;
+  return pills + addPill;
 }
 
 function renderMatchDashboard(match){
@@ -2549,13 +2570,15 @@ function renderMatchDashboard(match){
       <span class="team-name">${escapeHtml(izquierda)}</span>
       <span class="score">${golesIzq} - ${golesDer}</span>
       <span class="team-name">${escapeHtml(derecha)}</span>
+      <span class="score-minute">${match.live.half===2 ? "2ª" : "1ª"} · ${fmtClock(liveSecondsNow(match))}</span>
     </div>
-    <div class="kpi-group-label kpi-label-positiva">Positivas</div>
-    <div class="kpi-row">${kpiRowHtml(d.positivas, "success", "positiva")}</div>
-    <div class="kpi-group-label kpi-label-negativa">Negativas</div>
-    <div class="kpi-row">${kpiRowHtml(d.negativas, "danger", "negativa")}</div>
+    <div class="kpi-pill-row">
+      ${kpiPillsHtml(d.positivas, "success", "positiva")}
+      <div class="kpi-divider"></div>
+      ${kpiPillsHtml(d.negativas, "danger", "negativa")}
+    </div>
   `;
-  wrap.querySelectorAll(".kpi-add").forEach(tile=>{
+  wrap.querySelectorAll(".kpi-pill-add").forEach(tile=>{
     tile.addEventListener("click", async ()=>{
       const nueva = await promptNewStatColumn(tile.dataset.addGrupo);
       if(nueva){ recomputeStatsFromLive(match); renderLive(match); renderStatsTableOnly(match); saveMatch(match); }
@@ -2690,7 +2713,7 @@ function renderLive(match){
     hint.className = "hint";
     hint.textContent = liveCambioOut
       ? "Cambio en marcha: toca ahora quién ENTRA, en el banquillo"
-      : (liveSelected ? "Jugador elegido: toca la acción" : "Toca a un jugador en 'En el campo' y después la acción, o pulsa 'Cambio' para una sustitución");
+      : "Toca a un jugador en 'En el campo' y después la acción, o pulsa 'Cambio' para una sustitución";
     hintRow.appendChild(hint);
     if(liveCambioOut){
       const cancelBtn = document.createElement("button");
@@ -2701,70 +2724,111 @@ function renderLive(match){
     }
     liveSection.appendChild(hintRow);
 
+    const mainGrid = document.createElement("div");
+    mainGrid.className = "live-main-grid";
+
+    // ---- Columna izquierda: jugadores ----
+    const playersCol = document.createElement("div");
+    playersCol.className = "live-players-col";
+
     const onLbl = document.createElement("div");
     onLbl.style.cssText = "font-weight:bold;color:var(--navy);margin-top:8px;";
     onLbl.textContent = `En el campo (${onPitch.size})`;
-    liveSection.appendChild(onLbl);
+    playersCol.appendChild(onLbl);
     const onGrid = document.createElement("div");
     onGrid.className = "live-grid";
     players.filter(p=>onPitch.has(p.id)).forEach(p=> onGrid.appendChild(buildLiveChip(p, match, "on")));
-    liveSection.appendChild(onGrid);
+    playersCol.appendChild(onGrid);
 
     const benchLbl = document.createElement("div");
     benchLbl.style.cssText = "font-weight:bold;color:var(--navy);margin-top:6px;";
     benchLbl.textContent = "Banquillo";
-    liveSection.appendChild(benchLbl);
+    playersCol.appendChild(benchLbl);
     const benchGrid = document.createElement("div");
     benchGrid.className = "live-grid";
     players.filter(p=>!onPitch.has(p.id)).forEach(p=> benchGrid.appendChild(buildLiveChip(p, match, "bench", sentOff.has(p.id))));
-    liveSection.appendChild(benchGrid);
+    playersCol.appendChild(benchGrid);
 
-    const actions = document.createElement("div");
-    actions.className = "live-actions";
-    // Un botón por cada estadística (excepto "minutos", que no es tocable), en el orden
-    // y color que el entrenador haya configurado en "🎨 Organizar estadísticas".
-    // Tres comportamientos según el tipo (scope) de la estadística:
+    mainGrid.appendChild(playersCol);
+
+    // ---- Columna derecha: jugador seleccionado + acciones agrupadas (fija con scroll) ----
+    const actionsCol = document.createElement("div");
+    actionsCol.className = "live-actions-col";
+
+    const selPlayer = players.find(p=>p.id===liveSelected);
+    const selPill = document.createElement("div");
+    selPill.className = "selected-player-pill";
+    selPill.textContent = selPlayer ? `▶ ${selPlayer.num ? selPlayer.num + " " : ""}${displayAlias(selPlayer)}` : "Ningún jugador seleccionado";
+    actionsCol.appendChild(selPill);
+
+    // Un botón por cada estadística (excepto "minutos", que no es tocable), agrupadas visualmente
+    // en "Nuestro equipo" (grupo positiva) y "Rival y negativo" (grupo negativa), según lo configurado
+    // en "🎨 Organizar estadísticas". Comportamiento según el tipo (scope):
     //  - "player" (normal): hay que tocar antes a un jugador en "En el campo"
     //  - "goalkeeper": un solo toque, se anota sola en el portero que esté en el campo
     //  - "team": un solo toque, sin jugador (para lo que hace/recibe el rival)
     const FIXED_KEY_TO_TYPE = { goles:"gol", asistencias:"asistencia", ocasiones:"ocasion", amarillas:"amarilla", rojas:"roja" };
-    const FIXED_ICONS = { goles:"⚽ Gol", asistencias:"🅰️ Asistencia", ocasiones:"🎯 Ocasión", amarillas:"🟨 Amarilla", rojas:"🟥 Roja" };
-    statColumns.filter(col=> col.key !== "minutos").forEach(col=>{
-      const b = document.createElement("button");
-      b.className = "live-action-btn";
-      const color = col.color || "#2563eb";
-      b.style.background = color;
-      b.style.borderColor = color;
-      b.style.color = "#ffffff";
-      const fixedType = FIXED_KEY_TO_TYPE[col.key];
-      let icon = fixedType ? FIXED_ICONS[col.key] : ("📌 " + col.label);
-      if(col.scope === "goalkeeper") icon = "🧤 " + col.label;
-      if(col.scope === "team") icon = "🔺 " + col.label;
-      b.textContent = icon;
-      b.addEventListener("click", ()=>{
-        if(col.scope === "team") return handleTeamAction(match, col.key);
-        if(col.scope === "goalkeeper") return handleGoalkeeperAction(match, col.key);
-        return fixedType ? handleLiveAction(match, fixedType) : handleLiveCustomAction(match, col.key);
+    const FIXED_ICONS = { goles:"⚽ Gol", asistencias:"🅰️ Asist.", ocasiones:"🎯 Ocasión", amarillas:"🟨 Amar.", rojas:"🟥 Roja" };
+
+    function buildActionGroup(grupo, tituloGrupo){
+      const cols = statColumns.filter(col=> col.key !== "minutos" && (col.grupo === grupo || (!col.grupo && grupo === "positiva")));
+      const label = document.createElement("div");
+      label.className = "action-group-label " + grupo;
+      label.textContent = tituloGrupo;
+      actionsCol.appendChild(label);
+      const grid = document.createElement("div");
+      grid.className = "actions-compact";
+      cols.forEach(col=>{
+        const b = document.createElement("button");
+        b.className = "live-action-btn-compact";
+        const color = col.color || (grupo === "negativa" ? "#b91c1c" : "#2563eb");
+        b.style.background = color;
+        const fixedType = FIXED_KEY_TO_TYPE[col.key];
+        let icon = fixedType ? FIXED_ICONS[col.key] : ("📌 " + col.label);
+        if(col.scope === "goalkeeper") icon = "🧤 " + col.label;
+        if(col.scope === "team") icon = "🔺 " + col.label;
+        b.textContent = icon;
+        b.addEventListener("click", ()=>{
+          if(col.scope === "team") return handleTeamAction(match, col.key);
+          if(col.scope === "goalkeeper") return handleGoalkeeperAction(match, col.key);
+          return fixedType ? handleLiveAction(match, fixedType) : handleLiveCustomAction(match, col.key);
+        });
+        grid.appendChild(b);
       });
-      actions.appendChild(b);
-    });
+      const addBtn = document.createElement("button");
+      addBtn.className = "live-action-btn-add " + grupo;
+      addBtn.textContent = "+";
+      addBtn.title = "Añadir estadística nueva en este grupo";
+      addBtn.addEventListener("click", async ()=>{
+        const nueva = await promptNewStatColumn(grupo);
+        if(nueva){ recomputeStatsFromLive(match); renderLive(match); renderStatsTableOnly(match); saveMatch(match); }
+      });
+      grid.appendChild(addBtn);
+      actionsCol.appendChild(grid);
+    }
+
+    buildActionGroup("positiva", "Nuestro equipo");
+    buildActionGroup("negativa", "Rival y negativo");
+
     const cambioBtn = document.createElement("button");
-    cambioBtn.className = "live-action-btn";
+    cambioBtn.className = "cambio-btn-full";
     cambioBtn.textContent = "🔄 Cambio";
     cambioBtn.addEventListener("click", ()=> handleLiveAction(match, "cambio"));
-    actions.appendChild(cambioBtn);
-    liveSection.appendChild(actions);
+    actionsCol.appendChild(cambioBtn);
 
     const undoBtn = document.createElement("button");
     undoBtn.className = "live-btn grey";
-    undoBtn.style.marginBottom = "10px";
+    undoBtn.style.cssText = "margin-top:8px;width:100%;";
     undoBtn.textContent = "↺ Deshacer último evento";
     undoBtn.addEventListener("click", ()=>{
       match.live.events.pop();
       recomputeStatsFromLive(match);
       renderLive(match); renderStatsTableOnly(match); saveMatch(match);
     });
-    liveSection.appendChild(undoBtn);
+    actionsCol.appendChild(undoBtn);
+
+    mainGrid.appendChild(actionsCol);
+    liveSection.appendChild(mainGrid);
   }
 
   const feedLbl = document.createElement("div");
