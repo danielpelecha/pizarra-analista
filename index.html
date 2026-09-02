@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-1">
+<meta name="app-version" content="2026-09-02-2">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -394,6 +394,23 @@
     padding:12px 16px; margin-bottom:14px; flex-wrap:wrap; gap:10px;
   }
   .live-clock .time{ font-size:32px; font-weight:bold; color:var(--navy); }
+  .match-dashboard{
+    background:var(--navy); border-radius:10px; padding:12px 16px; margin-bottom:14px;
+  }
+  .scoreboard-row{
+    display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap;
+  }
+  .scoreboard-row .team-name{ color:#fff; font-size:14px; font-weight:bold; max-width:150px; text-align:center; }
+  .scoreboard-row .score{ color:#fff; font-size:26px; font-weight:bold; }
+  .kpi-row{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .kpi-card{
+    flex:1; min-width:90px; background:rgba(255,255,255,0.08); border-radius:8px;
+    padding:8px; text-align:center;
+  }
+  .kpi-card .kpi-value{ color:#fff; font-size:20px; font-weight:bold; }
+  .kpi-card .kpi-label{ color:#c7d2e0; font-size:11px; }
+  .kpi-card.kpi-danger .kpi-value{ color:#f0a3a3; }
+  .kpi-card.kpi-muted .kpi-value{ color:#8f9bb5; }
   .live-btn{
     border:none; border-radius:8px; font-weight:bold; cursor:pointer;
     padding:10px 16px; font-size:15px; color:#fff; background:var(--blue);
@@ -2443,6 +2460,48 @@ function startLiveTicker(){
 }
 function stopLiveTicker(){ if(liveTickerInterval){ clearInterval(liveTickerInterval); liveTickerInterval = null; } }
 
+function computeMatchDashboard(match){
+  const events = (match.live && match.live.events) || [];
+  const teamCols = statColumns.filter(c=> c.scope === "team");
+  const golContraCol = teamCols.find(c=> /gol/i.test(c.label) && /contra/i.test(c.label));
+  const perdidasCol = statColumns.find(c=> /perdid/i.test(c.label));
+  let golesFor = 0, golesAgainst = 0, ocasiones = 0, perdidas = 0;
+  events.forEach(ev=>{
+    if(ev.type === "gol") golesFor++;
+    else if(ev.type === "ocasion") ocasiones++;
+    else if(ev.type === "team_stat" && golContraCol && ev.key === golContraCol.key) golesAgainst++;
+    else if(ev.type === "custom" && perdidasCol && ev.key === perdidasCol.key) perdidas++;
+  });
+  return { golesFor, golesAgainst, ocasiones, perdidas };
+}
+
+function renderMatchDashboard(match){
+  const d = computeMatchDashboard(match);
+  const esLocal = (match.condicion || "LOCAL").toUpperCase() === "LOCAL";
+  const nombreClub = (currentClub && currentClub.name) || "Nuestro equipo";
+  const nombreRival = match.rival || "Rival";
+  const izquierda = esLocal ? nombreClub : nombreRival;
+  const derecha = esLocal ? nombreRival : nombreClub;
+  const golesIzq = esLocal ? d.golesFor : d.golesAgainst;
+  const golesDer = esLocal ? d.golesAgainst : d.golesFor;
+
+  const wrap = document.createElement("div");
+  wrap.className = "match-dashboard";
+  wrap.innerHTML = `
+    <div class="scoreboard-row">
+      <span class="team-name">${escapeHtml(izquierda)}</span>
+      <span class="score">${golesIzq} - ${golesDer}</span>
+      <span class="team-name">${escapeHtml(derecha)}</span>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="kpi-value">${d.ocasiones}</div><div class="kpi-label">Ocasiones</div></div>
+      <div class="kpi-card kpi-danger"><div class="kpi-value">${d.perdidas}</div><div class="kpi-label">Pérdidas</div></div>
+      <div class="kpi-card kpi-muted"><div class="kpi-value">—</div><div class="kpi-label">ABP anotada</div></div>
+    </div>
+  `;
+  return wrap;
+}
+
 function renderLive(match){
   if(!liveSection) return;
   ensureLive(match);
@@ -2484,6 +2543,8 @@ function renderLive(match){
   }
 
   const { onPitch, sentOff } = deriveLiveState(match);
+
+  liveSection.appendChild(renderMatchDashboard(match));
 
   const clockRow = document.createElement("div");
   clockRow.className = "live-clock";
