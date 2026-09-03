@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-10">
+<meta name="app-version" content="2026-09-02-11">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -385,6 +385,23 @@
   .data-table td.name-td{ text-align:left; font-weight:bold; color:var(--navy); white-space:nowrap; }
   .small-del{
     background:var(--danger); color:#fff; border:none; border-radius:6px;
+    padding:5px 9px; cursor:pointer; font-weight:bold; font-size:12px;
+  }
+  .small-edit{
+    background:var(--blue); color:#fff; border:none; border-radius:6px;
+    padding:5px 9px; cursor:pointer; font-weight:bold; font-size:12px; margin-right:6px;
+  }
+  .event-editor{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; width:100%; }
+  .event-editor-select{
+    border:1px solid var(--border); border-radius:6px; padding:5px 6px; font-size:12px;
+    flex:1 1 140px; min-width:110px;
+  }
+  .small-edit-save{
+    background:var(--success); color:#fff; border:none; border-radius:6px;
+    padding:5px 9px; cursor:pointer; font-weight:bold; font-size:12px;
+  }
+  .small-edit-cancel{
+    background:var(--grey); color:#fff; border:none; border-radius:6px;
     padding:5px 9px; cursor:pointer; font-weight:bold; font-size:12px;
   }
   .live-section{
@@ -2352,7 +2369,7 @@ function ensureLive(match){
   // traer solo "startersIds" sin el resto de campos del modo en vivo.
   const defaults = {
     startersIds: [], started:false, finished:false, events:[],
-    accSeconds:0, runStartedAt:null, running:false, half:1, finalMinute:null,
+    accSeconds:0, runStartedAt:null, running:false, half:1, finalMinute:null, half2StartSeconds:null,
   };
   if(!match.live || typeof match.live !== "object"){ match.live = {}; }
   Object.keys(defaults).forEach(k=>{
@@ -2363,6 +2380,14 @@ function liveSecondsNow(match){
   let s = match.live.accSeconds;
   if(match.live.running && match.live.runStartedAt){ s += Math.floor((Date.now() - match.live.runStartedAt) / 1000); }
   return s;
+}
+// Parcial de la 2a parte: nace en 0 en el instante exacto en que se pulsa "Pasar a 2a parte"
+// (match.live.half2StartSeconds guarda el reloj total en ese momento) y se calcula siempre
+// restando ese punto al reloj total actual — así cualquier ajuste de minuto o alargue se
+// refleja solo, sin tener que sincronizar dos contadores a mano.
+function half2SecondsNow(match){
+  if(match.live.half2StartSeconds === null || match.live.half2StartSeconds === undefined) return null;
+  return Math.max(0, liveSecondsNow(match) - match.live.half2StartSeconds);
 }
 function currentLiveMinute(match){
   if(match.live.finished) return match.live.finalMinute;
@@ -2509,12 +2534,114 @@ function handleTeamAction(match, statKey){
   renderLive(match); renderStatsTableOnly(match); saveMatch(match);
 }
 
+// Construye las opciones de tipo de estadística para el editor de eventos: los 5 tipos
+// fijos (gol, asistencia, ocasión, amarilla, roja) más el resto de estadísticas configuradas
+// (personalizadas, de portero y de equipo), cada una con su alcance (scope) para saber si
+// hace falta jugador o no al reasignar.
+function buildStatTypeOptions(){
+  const fixed = [
+    { value:"fixed:gol", label:"⚽ Gol", scope:"player" },
+    { value:"fixed:asistencia", label:"🅰️ Asistencia", scope:"player" },
+    { value:"fixed:ocasion", label:"🎯 Ocasión", scope:"player" },
+    { value:"fixed:amarilla", label:"🟨 Amarilla", scope:"player" },
+    { value:"fixed:roja", label:"🟥 Roja", scope:"player" },
+  ];
+  const resto = statColumns
+    .filter(c=> c.key !== "minutos" && !["goles","asistencias","ocasiones","amarillas","rojas"].includes(c.key))
+    .map(c=> ({
+      value: "col:" + c.key,
+      label: (c.scope==="team" ? "⚠️ " : c.scope==="goalkeeper" ? "🧤 " : "📌 ") + c.label,
+      scope: c.scope,
+    }));
+  return fixed.concat(resto);
+}
+
+// Editor en línea para corregir un evento ya registrado: reasignar el jugador y/o el tipo
+// de estadística, sin tener que borrar el evento y volver a anotarlo desde cero.
+function openEventEditor(match, ev, idx, row){
+  const options = buildStatTypeOptions();
+  const currentValue = ["gol","asistencia","ocasion","amarilla","roja"].includes(ev.type)
+    ? ("fixed:" + ev.type) : ("col:" + ev.key);
+
+  row.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.className = "event-editor";
+
+  const typeSel = document.createElement("select");
+  typeSel.className = "event-editor-select";
+  options.forEach(o=>{
+    const opt = document.createElement("option");
+    opt.value = o.value; opt.textContent = o.label;
+    if(o.value === currentValue) opt.selected = true;
+    typeSel.appendChild(opt);
+  });
+  wrap.appendChild(typeSel);
+
+  const playerSel = document.createElement("select");
+  playerSel.className = "event-editor-select";
+  players.forEach(p=>{
+    const opt = document.createElement("option");
+    opt.value = p.id; opt.textContent = (p.num ? p.num + " " : "") + displayAlias(p);
+    if(p.id === ev.playerId) opt.selected = true;
+    playerSel.appendChild(opt);
+  });
+  wrap.appendChild(playerSel);
+
+  function syncPlayerVisibility(){
+    const sel = options.find(o=> o.value === typeSel.value);
+    playerSel.style.display = (sel && sel.scope === "team") ? "none" : "";
+  }
+  typeSel.addEventListener("change", syncPlayerVisibility);
+  syncPlayerVisibility();
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "small-edit-save";
+  saveBtn.textContent = "💾";
+  saveBtn.title = "Guardar corrección";
+  saveBtn.addEventListener("click", ()=>{
+    const sel = options.find(o=> o.value === typeSel.value);
+    if(sel.value.startsWith("fixed:")){
+      ev.type = sel.value.slice(6);
+      delete ev.key;
+    } else {
+      const key = sel.value.slice(4);
+      const col = statColumns.find(c=> c.key === key);
+      ev.type = (col && col.scope === "team") ? "team_stat" : "custom";
+      ev.key = key;
+    }
+    if(sel.scope === "team"){ delete ev.playerId; }
+    else { ev.playerId = playerSel.value; }
+    recomputeStatsFromLive(match);
+    renderLive(match); renderStatsTableOnly(match); saveMatch(match);
+  });
+  wrap.appendChild(saveBtn);
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "small-edit-cancel";
+  cancelBtn.textContent = "✖";
+  cancelBtn.title = "Cancelar";
+  cancelBtn.addEventListener("click", ()=> renderLive(match));
+  wrap.appendChild(cancelBtn);
+
+  row.appendChild(wrap);
+}
+
 function startLiveTicker(){
   stopLiveTicker();
   liveTickerInterval = setInterval(()=>{
     if(!currentMatch || !currentMatch.live || !currentMatch.live.running){ stopLiveTicker(); return; }
     const clockEl = document.querySelector("#liveSection .live-clock .time");
     if(clockEl) clockEl.textContent = fmtClock(liveSecondsNow(currentMatch));
+    const parcialEl = document.getElementById("parcialHalf2");
+    if(parcialEl && currentMatch.live.half === 2){
+      const p2 = half2SecondsNow(currentMatch);
+      if(p2 !== null) parcialEl.textContent = "⏱ Parcial 2ª: " + fmtClock(p2);
+    }
+    const scoreMinuteEl = document.querySelector(".scoreboard-row .score-minute");
+    if(scoreMinuteEl){
+      const p2 = currentMatch.live.half===2 ? half2SecondsNow(currentMatch) : null;
+      scoreMinuteEl.innerHTML = (currentMatch.live.half===2 ? "2ª" : "1ª") + " · " + fmtClock(liveSecondsNow(currentMatch)) + (p2!==null ? ` <b>· parcial ${fmtClock(p2)}</b>` : "");
+    }
     if(liveSecondsNow(currentMatch) % 15 === 0){
       recomputeStatsFromLive(currentMatch);
       renderStatsTableOnly(currentMatch);
@@ -2594,7 +2721,7 @@ function renderMatchDashboard(match){
       <span class="team-name">${escapeHtml(izquierda)}</span>
       <span class="score">${golesIzq} - ${golesDer}</span>
       <span class="team-name">${escapeHtml(derecha)}</span>
-      <span class="score-minute">${match.live.half===2 ? "2ª" : "1ª"} · ${fmtClock(liveSecondsNow(match))}</span>
+      <span class="score-minute">${match.live.half===2 ? "2ª" : "1ª"} · ${fmtClock(liveSecondsNow(match))}${match.live.half===2 && half2SecondsNow(match)!==null ? ` <b>· parcial ${fmtClock(half2SecondsNow(match))}</b>` : ""}</span>
     </div>
     <div class="kpi-pill-row">
       ${kpiPillsHtml(d.positivas, "success", "positiva")}
@@ -2659,7 +2786,7 @@ function renderLive(match){
   const clockRow = document.createElement("div");
   clockRow.className = "live-clock";
   const timeWrap = document.createElement("div");
-  timeWrap.innerHTML = `<div style="font-size:12px;color:var(--grey);">${match.live.half===2 ? "2ª parte" : "1ª parte"}</div><div class="time">${fmtClock(liveSecondsNow(match))}</div>`;
+  timeWrap.innerHTML = `<div style="font-size:12px;color:var(--grey);">${match.live.half===2 ? "2ª parte" : "1ª parte"}</div><div class="time">${fmtClock(liveSecondsNow(match))}</div>${match.live.half===2 && half2SecondsNow(match)!==null ? `<div id="parcialHalf2" style="font-size:13px;color:var(--blue);font-weight:bold;margin-top:2px;">⏱ Parcial 2ª: ${fmtClock(half2SecondsNow(match))}</div>` : ""}`;
   clockRow.appendChild(timeWrap);
 
   const btnsWrap = document.createElement("div");
@@ -2684,7 +2811,16 @@ function renderLive(match){
     const halfBtn = document.createElement("button");
     halfBtn.className = "live-btn grey";
     halfBtn.textContent = match.live.half === 1 ? "Pasar a 2ª parte" : "Volver a 1ª parte";
-    halfBtn.addEventListener("click", ()=>{ match.live.half = match.live.half === 1 ? 2 : 1; renderLive(match); saveMatch(match); });
+    halfBtn.addEventListener("click", ()=>{
+      if(match.live.half === 1){
+        match.live.half = 2;
+        match.live.half2StartSeconds = liveSecondsNow(match);
+      } else {
+        match.live.half = 1;
+        match.live.half2StartSeconds = null;
+      }
+      renderLive(match); saveMatch(match);
+    });
     btnsWrap.appendChild(halfBtn);
 
     const adjustBtn = document.createElement("button");
@@ -2892,6 +3028,14 @@ function renderLive(match){
     }
     row.innerHTML = `<span class="min">${ev.minute}'</span><span style="flex:1;">${escapeHtml(text)}</span>`;
     if(!match.live.finished){
+      if(ev.type !== "cambio"){
+        const editBtn = document.createElement("button");
+        editBtn.className = "small-edit";
+        editBtn.textContent = "✏️";
+        editBtn.title = "Corregir jugador o tipo de estadística";
+        editBtn.addEventListener("click", ()=> openEventEditor(match, ev, idx, row));
+        row.appendChild(editBtn);
+      }
       const delBtn = document.createElement("button");
       delBtn.className = "small-del";
       delBtn.textContent = "✕";
