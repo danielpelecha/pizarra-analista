@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-15">
+<meta name="app-version" content="2026-09-02-16">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -2583,16 +2583,16 @@ function buildStatTypeOptions(){
   return fixed.concat(resto);
 }
 
-// Editor en línea para corregir un evento ya registrado: reasignar el jugador y/o el tipo
-// de estadística, sin tener que borrar el evento y volver a anotarlo desde cero.
 // Editor en línea para añadir, modificar o quitar la nota de texto libre de un evento.
 // El mismo botón sirve para crear una nota nueva (campo vacío) y para modificar una ya
 // existente (campo precargado con el texto guardado).
+// IMPORTANTE: "Cancelar" repinta con renderLive(match) en vez de restaurar el HTML de la
+// fila a mano — restaurar con innerHTML recrea los botones pero sin sus eventos de clic
+// (el HTML no guarda los addEventListener), dejándolos "muertos" a partir de ahí.
 function openEventNoteEditor(match, ev, rowWrap){
   const existingNote = rowWrap.querySelector(".live-feed-note");
   if(existingNote) existingNote.style.display = "none";
   const row = rowWrap.querySelector(".live-feed-row");
-  const savedRowHtml = row.innerHTML;
 
   row.innerHTML = "";
   const wrap = document.createElement("div");
@@ -2626,7 +2626,7 @@ function openEventNoteEditor(match, ev, rowWrap){
   const cancelBtn = document.createElement("button");
   cancelBtn.className = "small-edit-cancel";
   cancelBtn.textContent = "✖ Cancelar";
-  cancelBtn.addEventListener("click", ()=>{ row.innerHTML = savedRowHtml; if(existingNote) existingNote.style.display = ""; });
+  cancelBtn.addEventListener("click", ()=> renderLive(match));
   rightBtns.appendChild(cancelBtn);
 
   const saveBtn = document.createElement("button");
