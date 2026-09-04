@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-14">
+<meta name="app-version" content="2026-09-02-15">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -409,6 +409,27 @@
   }
   .small-edit-cancel{
     background:var(--grey); color:#fff; border:none; border-radius:6px;
+    padding:5px 9px; cursor:pointer; font-weight:bold; font-size:12px;
+  }
+  .small-note{
+    background:#fff; color:var(--grey); border:1px solid var(--border); border-radius:6px;
+    padding:5px 9px; cursor:pointer; font-weight:bold; font-size:12px; margin-right:6px;
+  }
+  .small-note.has-note{ background:var(--blue); color:#fff; border-color:var(--blue); }
+  .live-feed-row-wrap{ margin-bottom:6px; }
+  .live-feed-row-wrap .live-feed-row{ margin-bottom:0; }
+  .live-feed-note{
+    font-size:12px; color:var(--grey); font-style:italic;
+    margin:2px 0 0 42px; padding:0 4px;
+  }
+  .note-editor{ width:100%; }
+  .note-editor-textarea{
+    width:100%; min-height:52px; border:1px solid var(--border); border-radius:6px;
+    padding:6px 8px; font-size:13px; font-family:inherit; resize:vertical; box-sizing:border-box;
+  }
+  .note-editor-btns{ display:flex; gap:6px; margin-top:6px; justify-content:space-between; align-items:center; }
+  .note-editor-remove{
+    background:transparent; color:var(--danger); border:1px solid var(--danger); border-radius:6px;
     padding:5px 9px; cursor:pointer; font-weight:bold; font-size:12px;
   }
   .live-section{
@@ -2564,6 +2585,66 @@ function buildStatTypeOptions(){
 
 // Editor en línea para corregir un evento ya registrado: reasignar el jugador y/o el tipo
 // de estadística, sin tener que borrar el evento y volver a anotarlo desde cero.
+// Editor en línea para añadir, modificar o quitar la nota de texto libre de un evento.
+// El mismo botón sirve para crear una nota nueva (campo vacío) y para modificar una ya
+// existente (campo precargado con el texto guardado).
+function openEventNoteEditor(match, ev, rowWrap){
+  const existingNote = rowWrap.querySelector(".live-feed-note");
+  if(existingNote) existingNote.style.display = "none";
+  const row = rowWrap.querySelector(".live-feed-row");
+  const savedRowHtml = row.innerHTML;
+
+  row.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.className = "note-editor";
+
+  const textarea = document.createElement("textarea");
+  textarea.className = "note-editor-textarea";
+  textarea.placeholder = "Ej: córner cerrado al primer palo, remate desviado...";
+  textarea.value = ev.note || "";
+  wrap.appendChild(textarea);
+
+  const btnRow = document.createElement("div");
+  btnRow.className = "note-editor-btns";
+
+  if(ev.note){
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "note-editor-remove";
+    removeBtn.textContent = "🗑 Quitar nota";
+    removeBtn.addEventListener("click", ()=>{
+      delete ev.note;
+      renderLive(match); saveMatch(match);
+    });
+    btnRow.appendChild(removeBtn);
+  } else {
+    btnRow.appendChild(document.createElement("span"));
+  }
+
+  const rightBtns = document.createElement("div");
+  rightBtns.style.cssText = "display:flex; gap:6px;";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "small-edit-cancel";
+  cancelBtn.textContent = "✖ Cancelar";
+  cancelBtn.addEventListener("click", ()=>{ row.innerHTML = savedRowHtml; if(existingNote) existingNote.style.display = ""; });
+  rightBtns.appendChild(cancelBtn);
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "small-edit-save";
+  saveBtn.textContent = "💾 Guardar";
+  saveBtn.addEventListener("click", ()=>{
+    const val = textarea.value.trim();
+    if(val){ ev.note = val; } else { delete ev.note; }
+    renderLive(match); saveMatch(match);
+  });
+  rightBtns.appendChild(saveBtn);
+
+  btnRow.appendChild(rightBtns);
+  wrap.appendChild(btnRow);
+  row.appendChild(wrap);
+  textarea.focus();
+}
+
 function openEventEditor(match, ev, idx, row){
   const options = buildStatTypeOptions();
   const currentValue = ["gol","asistencia","ocasion","amarilla","roja"].includes(ev.type)
@@ -3014,6 +3095,8 @@ function renderLive(match){
   const labels = { gol:"⚽ Gol", asistencia:"🅰️ Asistencia", ocasion:"🎯 Ocasión", amarilla:"🟨 Amarilla", roja:"🟥 Roja" };
   const indexed = match.live.events.map((ev, idx)=>({ev, idx})).reverse();
   indexed.forEach(({ev, idx})=>{
+    const rowWrap = document.createElement("div");
+    rowWrap.className = "live-feed-row-wrap";
     const row = document.createElement("div");
     row.className = "live-feed-row";
     let text;
@@ -3039,6 +3122,12 @@ function renderLive(match){
     }
     row.innerHTML = `<span class="min">${ev.minute}'</span><span style="flex:1;">${escapeHtml(text)}</span>`;
     if(!match.live.finished){
+      const noteBtn = document.createElement("button");
+      noteBtn.className = "small-note" + (ev.note ? " has-note" : "");
+      noteBtn.textContent = "📝";
+      noteBtn.title = ev.note ? "Ver o modificar la nota de este evento" : "Añadir una nota a este evento";
+      noteBtn.addEventListener("click", ()=> openEventNoteEditor(match, ev, rowWrap));
+      row.appendChild(noteBtn);
       if(ev.type !== "cambio"){
         const editBtn = document.createElement("button");
         editBtn.className = "small-edit";
@@ -3060,7 +3149,14 @@ function renderLive(match){
       });
       row.appendChild(delBtn);
     }
-    feed.appendChild(row);
+    rowWrap.appendChild(row);
+    if(ev.note){
+      const noteEl = document.createElement("div");
+      noteEl.className = "live-feed-note";
+      noteEl.textContent = "💬 " + ev.note;
+      rowWrap.appendChild(noteEl);
+    }
+    feed.appendChild(rowWrap);
   });
   if(match.live.events.length === 0){
     const empty = document.createElement("div");
