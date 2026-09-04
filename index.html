@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-16">
+<meta name="app-version" content="2026-09-02-17">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -422,7 +422,7 @@
     font-size:12px; color:var(--grey); font-style:italic;
     margin:2px 0 0 42px; padding:0 4px;
   }
-  .note-editor{ width:100%; }
+  .note-editor{ width:100%; margin-top:4px; }
   .note-editor-textarea{
     width:100%; min-height:52px; border:1px solid var(--border); border-radius:6px;
     padding:6px 8px; font-size:13px; font-family:inherit; resize:vertical; box-sizing:border-box;
@@ -2586,15 +2586,15 @@ function buildStatTypeOptions(){
 // Editor en línea para añadir, modificar o quitar la nota de texto libre de un evento.
 // El mismo botón sirve para crear una nota nueva (campo vacío) y para modificar una ya
 // existente (campo precargado con el texto guardado).
-// IMPORTANTE: "Cancelar" repinta con renderLive(match) en vez de restaurar el HTML de la
-// fila a mano — restaurar con innerHTML recrea los botones pero sin sus eventos de clic
-// (el HTML no guarda los addEventListener), dejándolos "muertos" a partir de ahí.
+// IMPORTANTE: no se toca el contenido de la fila del evento (row) — el editor se añade
+// como un bloque aparte debajo, para que el jugador/estadística siga siempre visible
+// mientras se escribe, sin taparlo ni obligar a recordarlo de memoria.
 function openEventNoteEditor(match, ev, rowWrap){
   const existingNote = rowWrap.querySelector(".live-feed-note");
   if(existingNote) existingNote.style.display = "none";
-  const row = rowWrap.querySelector(".live-feed-row");
+  const existingEditor = rowWrap.querySelector(".note-editor");
+  if(existingEditor) existingEditor.remove();
 
-  row.innerHTML = "";
   const wrap = document.createElement("div");
   wrap.className = "note-editor";
 
@@ -2641,7 +2641,7 @@ function openEventNoteEditor(match, ev, rowWrap){
 
   btnRow.appendChild(rightBtns);
   wrap.appendChild(btnRow);
-  row.appendChild(wrap);
+  rowWrap.appendChild(wrap);
   textarea.focus();
 }
 
