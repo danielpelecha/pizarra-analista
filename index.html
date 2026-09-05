@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-05-1">
+<meta name="app-version" content="2026-09-05-2">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -1801,6 +1801,7 @@ formationSelect.addEventListener("change", ()=>{
   // (y las posiciones arrastradas a mano se reinician a la disposición elegida).
   resetStarterPositionsFromFormation();
   renderLineupSelects();
+  drawPitch();
 });
 
 document.getElementById("resetPositionsBtn").addEventListener("click", ()=>{
