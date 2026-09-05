@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-20">
+<meta name="app-version" content="2026-09-05-1">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -677,6 +677,7 @@
 
   .hidden{ display:none !important; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -915,6 +916,7 @@
             <canvas id="pitchCanvas" width="900" height="1700"></canvas>
             <div>
               <button class="btn download-btn-lineup" id="downloadLineupBtn" style="width:auto; margin-top:16px;">⬇️ Descargar alineación (PNG)</button>
+              <button class="btn download-btn-lineup" id="downloadLineupPdfBtn" style="width:auto; margin-top:16px; margin-left:8px; background:var(--navy);">⬇️ Descargar alineación (PDF)</button>
               <button class="btn secondary" id="resetPositionsBtn" style="width:auto; margin-top:16px; margin-left:8px;">↺ Restablecer posiciones</button>
             </div>
             <p class="hint">Puedes arrastrar directamente a cada jugador sobre el campo (ratón o dedo) para ajustar su posición exacta.</p>
@@ -2147,6 +2149,22 @@ document.getElementById("downloadLineupBtn").addEventListener("click", ()=>{
   link.download = `alineacion_${rivalSlug}.png`;
   link.href = pitchCanvas.toDataURL("image/png");
   link.click();
+});
+
+document.getElementById("downloadLineupPdfBtn").addEventListener("click", ()=>{
+  if(!window.jspdf){
+    alert("No se ha podido cargar el generador de PDF. Comprueba tu conexión a internet e inténtalo de nuevo.");
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const rivalSlug = (matchRival.value || "alineacion").trim().replace(/\s+/g,"_");
+  // El PDF se dimensiona en milimetros a partir de las proporciones reales del canvas
+  // (900x1700px), para que la imagen ocupe toda la pagina sin deformarse ni recortarse.
+  const pageWidthMm = 190;
+  const pageHeightMm = pageWidthMm * (pitchCanvas.height / pitchCanvas.width);
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: [pageWidthMm + 20, pageHeightMm + 20] });
+  doc.addImage(pitchCanvas.toDataURL("image/png"), "PNG", 10, 10, pageWidthMm, pageHeightMm);
+  doc.save(`alineacion_${rivalSlug}.pdf`);
 });
 
 // ==================================================================
