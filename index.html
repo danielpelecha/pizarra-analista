@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-05-3">
+<meta name="app-version" content="2026-09-05-4">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -1881,6 +1881,11 @@ lineupMatchSelect.addEventListener("change", async ()=>{
     if(savedStarters.length > 0){
       lineupStarters = [...savedStarters];
     }
+    const savedSubs = (m.live && Array.isArray(m.live.subsIds)) ? m.live.subsIds : [];
+    if(savedSubs.length > 0){
+      lineupSubs = new Array(SUBS_COUNT).fill("");
+      for(let i=0; i<Math.min(savedSubs.length, SUBS_COUNT); i++){ lineupSubs[i] = savedSubs[i]; }
+    }
     resetStarterPositionsFromFormation();
     renderLineupSelects();
   }
@@ -1906,6 +1911,7 @@ saveLineupToMatchBtn.addEventListener("click", async ()=>{
 
   const live = freshMatch.live && typeof freshMatch.live === "object" ? { ...freshMatch.live } : {};
   live.startersIds = starters;
+  live.subsIds = lineupSubs.filter(id=> !!id);
 
   const { error } = await supabase.from("matches").update({
     date: matchFecha.value || freshMatch.date,
