@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-19">
+<meta name="app-version" content="2026-09-02-20">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -617,6 +617,11 @@
   .report-pill.pos{ background:var(--lightblue); color:var(--success); border:1px solid var(--success); }
   .report-pill.neg{ background:#fdeceb; color:var(--danger); border:1px solid var(--danger); }
   .report-timeline{ display:flex; flex-direction:column; gap:3px; }
+  .report-half-title{
+    font-size:13px; font-weight:bold; color:var(--navy); background:var(--lightblue);
+    padding:5px 10px; border-radius:6px; margin:10px 0 4px;
+  }
+  .report-half-title:first-child{ margin-top:0; }
   .report-event{ display:flex; gap:8px; padding:4px 8px; border-radius:5px; font-size:13px; align-items:baseline; }
   .report-event.pos{ background:#eaf7ef; }
   .report-event.neg{ background:#fdeceb; }
@@ -2514,8 +2519,7 @@ function buildMatchReportHTML(match){
   // Linea temporal ordenada de más antiguo a más reciente (al revés que en el registro en vivo).
   const labels = { gol:"⚽ Gol", asistencia:"🅰️ Asistencia", ocasion:"🎯 Ocasión", amarilla:"🟨 Amarilla", roja:"🟥 Roja" };
   const fixedKeyMap = { gol:"goles", asistencia:"asistencias", ocasion:"ocasiones", amarilla:"amarillas", roja:"rojas" };
-  const eventsSorted = [...match.live.events].sort((a,b)=> a.minute - b.minute);
-  const timelineHtml = eventsSorted.map(ev=>{
+  function buildEventLineHtml(ev){
     let text, tono = "";
     if(ev.type === "cambio"){
       const pOut = players.find(p=>p.id===ev.outId), pIn = players.find(p=>p.id===ev.inId);
@@ -2533,7 +2537,28 @@ function buildMatchReportHTML(match){
     }
     const noteHtml = ev.note ? `<p class="report-event-note">💬 ${escapeHtml(ev.note)}</p>` : "";
     return `<div class="report-event ${tono}"><span class="min">${ev.minute}'</span><span>${escapeHtml(text)}</span></div>${noteHtml}`;
-  }).join("");
+  }
+
+  // Cada evento nuevo guarda su segundo exacto (ev.second); los antiguos, de antes de que
+  // empezáramos a guardarlo, solo tienen el minuto redondo — para esos se compara por
+  // minuto (con un margen mínimo de error solo si algo ocurrió justo en el minuto del
+  // cambio de parte). Sin el punto de corte guardado (partidos muy antiguos), no se separa.
+  const cutoff = match.live.half2StartSeconds;
+  let timelineHtml;
+  if(cutoff === null || cutoff === undefined){
+    const eventsSorted = [...match.live.events].sort((a,b)=> a.minute - b.minute);
+    timelineHtml = eventsSorted.map(buildEventLineHtml).join("");
+  } else {
+    const eventTime = ev=> ev.second !== undefined ? ev.second : ev.minute * 60;
+    const half1 = match.live.events.filter(ev=> eventTime(ev) < cutoff).sort((a,b)=> eventTime(a) - eventTime(b));
+    const half2 = match.live.events.filter(ev=> eventTime(ev) >= cutoff).sort((a,b)=> eventTime(a) - eventTime(b));
+    timelineHtml = `
+      <p class="report-half-title">▶ 1ª parte</p>
+      ${half1.length ? half1.map(buildEventLineHtml).join("") : '<p class="hint">Sin eventos en la 1ª parte.</p>'}
+      <p class="report-half-title">▶ 2ª parte</p>
+      ${half2.length ? half2.map(buildEventLineHtml).join("") : '<p class="hint">Sin eventos en la 2ª parte.</p>'}
+    `;
+  }
 
   // Tabla individual: todas las estadisticas configuradas (excepto "minutos", que va aparte),
   // solo de los jugadores que han disputado algún minuto.
@@ -2789,7 +2814,7 @@ function buildLiveChip(p, match, zone, isSentOff){
   chip.addEventListener("click", ()=>{
     if(liveCambioOut){
       if(zone === "bench"){
-        match.live.events.push({ type:"cambio", minute: currentLiveMinute(match), outId: liveCambioOut, inId: p.id });
+        match.live.events.push({ type:"cambio", minute: currentLiveMinute(match), second: liveSecondsNow(match), outId: liveCambioOut, inId: p.id });
         liveCambioOut = null;
         recomputeStatsFromLive(match);
         renderLive(match); renderStatsTableOnly(match); saveMatch(match);
@@ -2809,7 +2834,7 @@ function handleLiveAction(match, type){
     return;
   }
   if(!liveSelected){ alert("Primero toca a un jugador en 'En el campo'."); return; }
-  match.live.events.push({ type, minute: currentLiveMinute(match), playerId: liveSelected });
+  match.live.events.push({ type, minute: currentLiveMinute(match), second: liveSecondsNow(match), playerId: liveSelected });
   liveSelected = null;
   recomputeStatsFromLive(match);
   renderLive(match); renderStatsTableOnly(match); saveMatch(match);
@@ -2819,7 +2844,7 @@ function handleLiveAction(match, type){
 // creada por el entrenador (columnas de stat_columns que no son ninguna de las 6 fijas).
 function handleLiveCustomAction(match, statKey){
   if(!liveSelected){ alert("Primero toca a un jugador en 'En el campo'."); return; }
-  match.live.events.push({ type:"custom", key: statKey, minute: currentLiveMinute(match), playerId: liveSelected });
+  match.live.events.push({ type:"custom", key: statKey, minute: currentLiveMinute(match), second: liveSecondsNow(match), playerId: liveSelected });
   liveSelected = null;
   recomputeStatsFromLive(match);
   renderLive(match); renderStatsTableOnly(match); saveMatch(match);
@@ -2833,7 +2858,7 @@ function handleGoalkeeperAction(match, statKey){
     alert("No se ha identificado a ningún portero en el campo ahora mismo. Revisa que su posición incluya 'Portero' en la Plantilla y que esté entre los jugadores en el campo.");
     return;
   }
-  match.live.events.push({ type:"custom", key: statKey, minute: currentLiveMinute(match), playerId: gk.id });
+  match.live.events.push({ type:"custom", key: statKey, minute: currentLiveMinute(match), second: liveSecondsNow(match), playerId: gk.id });
   recomputeStatsFromLive(match);
   renderLive(match); renderStatsTableOnly(match); saveMatch(match);
 }
@@ -2841,7 +2866,7 @@ function handleGoalkeeperAction(match, statKey){
 // Estadísticas de EQUIPO: un solo toque, sin jugador (goles/ocasiones del rival, que no
 // podemos atribuir a ningún jugador nuestro). Solo se cuenta y se guarda el minuto.
 function handleTeamAction(match, statKey){
-  match.live.events.push({ type:"team_stat", key: statKey, minute: currentLiveMinute(match) });
+  match.live.events.push({ type:"team_stat", key: statKey, minute: currentLiveMinute(match), second: liveSecondsNow(match) });
   recomputeStatsFromLive(match);
   renderLive(match); renderStatsTableOnly(match); saveMatch(match);
 }
