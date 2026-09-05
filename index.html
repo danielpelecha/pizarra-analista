@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-02-17">
+<meta name="app-version" content="2026-09-02-18">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -572,6 +572,25 @@
     padding:0; cursor:pointer; flex-shrink:0;
   }
   .stat-manager-label{ flex:1; font-size:15px; font-weight:bold; color:var(--navy); }
+  .stat-mvp-wrap{ display:flex; align-items:center; gap:4px; }
+  .stat-mvp-label{ font-size:13px; }
+  .stat-mvp-input{
+    width:48px; border:1px solid var(--border); border-radius:6px;
+    padding:4px 6px; font-size:13px; text-align:center;
+  }
+  .mvp-panel{
+    background:var(--navy); border-radius:10px; padding:16px 18px; margin-top:12px;
+  }
+  .mvp-panel .hint{ color:#c7d2e0; }
+  .mvp-title{ color:#fff; font-size:16px; font-weight:bold; text-align:center; margin:0 0 4px; }
+  .mvp-list{ display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+  .mvp-row{
+    background:rgba(255,255,255,0.1); border-radius:8px; padding:10px 12px;
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+  }
+  .mvp-name{ color:#fff; font-size:14px; font-weight:bold; margin:0; }
+  .mvp-breakdown{ color:#9fe1cb; font-size:11px; margin:2px 0 0; }
+  .mvp-points{ color:#fff; font-size:19px; font-weight:bold; flex-shrink:0; }
   .stat-manager-key{ font-size:12px; color:var(--grey); }
 
   .crest-box{
@@ -891,7 +910,11 @@
             </table>
           </div>
           <div id="teamStatsPanel" class="team-stats-panel hidden"></div>
-          <button class="btn" id="deleteMatchBtn" style="width:auto; margin-top:16px; background:var(--danger);">🗑 Eliminar partido</button>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
+            <button class="btn" id="mvpBtn" style="width:auto; margin-top:0; background:#ca8a04;" hidden>🏆 Candidatos a MVP</button>
+            <button class="btn" id="deleteMatchBtn" style="width:auto; margin-top:0; background:var(--danger);">🗑 Eliminar partido</button>
+          </div>
+          <div id="mvpPanel" class="mvp-panel hidden"></div>
           <div id="matchMsg" class="msg"></div>
         </div>
       </div>
@@ -2114,6 +2137,8 @@ const matchMetaForm = document.getElementById("matchMetaForm");
 const statsTableHead = document.getElementById("statsTableHead");
 const statsTableBody = document.getElementById("statsTableBody");
 const matchMsg = document.getElementById("matchMsg");
+const mvpBtn = document.getElementById("mvpBtn");
+const mvpPanel = document.getElementById("mvpPanel");
 const liveSection = document.getElementById("liveSection");
 
 const LIVE_STAT_MAP = { gol:"goles", asistencia:"asistencias", ocasion:"ocasiones", amarilla:"amarillas", roja:"rojas" };
@@ -2218,6 +2243,30 @@ function renderStatManager(){
     labelWrap.className = "stat-manager-label";
     labelWrap.textContent = col.label;
     row.appendChild(labelWrap);
+
+    if(col.key !== "minutos"){
+      const mvpWrap = document.createElement("div");
+      mvpWrap.className = "stat-mvp-wrap";
+      const mvpLbl = document.createElement("span");
+      mvpLbl.className = "stat-mvp-label";
+      mvpLbl.textContent = "🏆";
+      mvpLbl.title = "Puntos que suma esta estadística para el MVP del partido";
+      mvpWrap.appendChild(mvpLbl);
+      const mvpInput = document.createElement("input");
+      mvpInput.type = "number";
+      mvpInput.step = "1";
+      mvpInput.className = "stat-mvp-input";
+      mvpInput.value = col.mvp_points || 0;
+      mvpInput.title = "Puntos MVP";
+      mvpInput.addEventListener("change", async ()=>{
+        const val = Number(mvpInput.value) || 0;
+        col.mvp_points = val;
+        const { error } = await supabase.from("stat_columns").update({ mvp_points: val }).eq("id", col.id);
+        if(error) showMsg(matchMsg, "No se ha podido guardar los puntos MVP: " + error.message, "error");
+      });
+      mvpWrap.appendChild(mvpInput);
+      row.appendChild(mvpWrap);
+    }
 
     // ---- Arrastrar (ratón y dedo) con desplazamiento en bloque del resto de filas ----
     handle.addEventListener("pointerdown", (evt)=>{
@@ -2331,6 +2380,67 @@ document.getElementById("newMatchBtn").addEventListener("click", async ()=>{
   subscribeToMatchRealtime(currentMatch.id);
   renderMatchList();
   renderMatchDetail();
+});
+
+// Calcula los candidatos a MVP del partido: suma, para cada jugador, sus estadísticas
+// multiplicadas por los puntos configurados en "Organizar estadísticas" (las negativas
+// valen 0 por defecto, así que nunca restan). Se muestran todos los jugadores empatados
+// en los 3 puntajes más altos, no exactamente 3 jugadores si hay empate.
+function computeMvpCandidates(match){
+  const scored = players
+    .filter(p=> match.stats[p.id])
+    .map(p=>{
+      let total = 0;
+      const breakdown = [];
+      statColumns.forEach(col=>{
+        if(col.key === "minutos" || !col.mvp_points) return;
+        const val = match.stats[p.id][col.key];
+        const n = typeof val === "number" ? val : 0;
+        if(n > 0){
+          total += n * col.mvp_points;
+          breakdown.push(`${n} ${col.label.toLowerCase()}`);
+        }
+      });
+      return { player: p, total, breakdown };
+    })
+    .filter(s=> s.total > 0)
+    .sort((a,b)=> b.total - a.total);
+
+  const topScores = [...new Set(scored.map(s=> s.total))].slice(0, 3);
+  return scored.filter(s=> topScores.includes(s.total));
+}
+
+function renderMvpPanel(match){
+  const candidates = computeMvpCandidates(match);
+  const medals = ["🥇","🥈","🥉"];
+  const scores = [...new Set(candidates.map(c=>c.total))];
+  if(candidates.length === 0){
+    mvpPanel.innerHTML = `<p class="hint">Todavía no hay estadísticas con puntos MVP asignados en este partido. Puedes darle puntos a cada estadística desde "🎨 Organizar estadísticas".</p>`;
+  } else {
+    mvpPanel.innerHTML = `
+      <p class="mvp-title">🏆 Candidatos a MVP</p>
+      <p class="hint" style="margin-top:0;">Propuesta automática por puntos — la decisión final del MVP es siempre tuya.</p>
+      <div class="mvp-list">
+        ${candidates.map(c=>{
+          const medal = medals[scores.indexOf(c.total)] || "";
+          return `<div class="mvp-row">
+            <div>
+              <p class="mvp-name">${medal} ${escapeHtml(displayAlias(c.player))}</p>
+              <p class="mvp-breakdown">${escapeHtml(c.breakdown.join(" · "))}</p>
+            </div>
+            <span class="mvp-points">${c.total} pts</span>
+          </div>`;
+        }).join("")}
+      </div>
+    `;
+  }
+  mvpPanel.classList.remove("hidden");
+}
+
+mvpBtn.addEventListener("click", ()=>{
+  if(!currentMatch) return;
+  if(!mvpPanel.classList.contains("hidden")){ mvpPanel.classList.add("hidden"); return; }
+  renderMvpPanel(currentMatch);
 });
 
 document.getElementById("deleteMatchBtn").addEventListener("click", async ()=>{
@@ -3248,6 +3358,9 @@ function renderMatchDetail(){
   ensureLive(currentMatch);
   renderLive(currentMatch);
   if(currentMatch.live.started && currentMatch.live.running && !currentMatch.live.finished) startLiveTicker();
+  mvpBtn.hidden = !currentMatch.live.finished;
+  mvpPanel.classList.add("hidden");
+  mvpPanel.innerHTML = "";
 
   // ---- Formulario de datos del partido ----
   matchMetaForm.innerHTML = "";
