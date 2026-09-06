@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-05-4">
+<meta name="app-version" content="2026-09-06-1">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -2194,6 +2194,10 @@ let matchesList = [];               // resumen de partidos del club (para la lis
 let currentMatch = null;            // partido abierto actualmente (objeto completo con stats/live)
 let liveSelected = null;
 let liveCambioOut = null;
+// Cuando hay un editor en línea abierto (nota o corregir tipo/jugador), la actualización en
+// tiempo real de otro dispositivo NO debe repintar la pantalla entera (borraría lo que se
+// está escribiendo) — solo actualiza los datos en silencio, y se ve al cerrar el editor.
+let liveEditingOpen = false;
 let liveTickerInterval = null;
 let matchRealtimeChannel = null;    // suscripción en vivo al partido abierto (para ver cambios de otro dispositivo)
 
@@ -2212,6 +2216,7 @@ function subscribeToMatchRealtime(matchId){
         // Si el cambio lo hemos hecho nosotros mismos hace un instante, no hace falta re-pintar.
         if(incoming.last_modified === currentMatch.last_modified) return;
         currentMatch = { ...currentMatch, ...incoming };
+        if(liveEditingOpen) return; // hay una nota o edición abierta: no repintar ahora, se verá al cerrarla
         liveSelected = null; liveCambioOut = null;
         renderMatchDetail();
       }
@@ -2936,6 +2941,7 @@ function buildStatTypeOptions(){
 // como un bloque aparte debajo, para que el jugador/estadística siga siempre visible
 // mientras se escribe, sin taparlo ni obligar a recordarlo de memoria.
 function openEventNoteEditor(match, ev, rowWrap){
+  liveEditingOpen = true;
   const existingNote = rowWrap.querySelector(".live-feed-note");
   if(existingNote) existingNote.style.display = "none";
   const existingEditor = rowWrap.querySelector(".note-editor");
@@ -2959,6 +2965,7 @@ function openEventNoteEditor(match, ev, rowWrap){
     removeBtn.textContent = "🗑 Quitar nota";
     removeBtn.addEventListener("click", ()=>{
       delete ev.note;
+      liveEditingOpen = false;
       renderLive(match); saveMatch(match);
     });
     btnRow.appendChild(removeBtn);
@@ -2972,7 +2979,7 @@ function openEventNoteEditor(match, ev, rowWrap){
   const cancelBtn = document.createElement("button");
   cancelBtn.className = "small-edit-cancel";
   cancelBtn.textContent = "✖ Cancelar";
-  cancelBtn.addEventListener("click", ()=> renderLive(match));
+  cancelBtn.addEventListener("click", ()=>{ liveEditingOpen = false; renderLive(match); });
   rightBtns.appendChild(cancelBtn);
 
   const saveBtn = document.createElement("button");
@@ -2981,6 +2988,7 @@ function openEventNoteEditor(match, ev, rowWrap){
   saveBtn.addEventListener("click", ()=>{
     const val = textarea.value.trim();
     if(val){ ev.note = val; } else { delete ev.note; }
+    liveEditingOpen = false;
     renderLive(match); saveMatch(match);
   });
   rightBtns.appendChild(saveBtn);
@@ -2997,6 +3005,7 @@ function openEventEditor(match, ev, idx, row){
     ? ("fixed:" + ev.type) : ("col:" + ev.key);
 
   row.innerHTML = "";
+  liveEditingOpen = true;
   const wrap = document.createElement("div");
   wrap.className = "event-editor";
 
@@ -3044,6 +3053,7 @@ function openEventEditor(match, ev, idx, row){
     }
     if(sel.scope === "team"){ delete ev.playerId; }
     else { ev.playerId = playerSel.value; }
+    liveEditingOpen = false;
     recomputeStatsFromLive(match);
     renderLive(match); renderStatsTableOnly(match); saveMatch(match);
   });
@@ -3053,7 +3063,7 @@ function openEventEditor(match, ev, idx, row){
   cancelBtn.className = "small-edit-cancel";
   cancelBtn.textContent = "✖";
   cancelBtn.title = "Cancelar";
-  cancelBtn.addEventListener("click", ()=> renderLive(match));
+  cancelBtn.addEventListener("click", ()=>{ liveEditingOpen = false; renderLive(match); });
   wrap.appendChild(cancelBtn);
 
   row.appendChild(wrap);
@@ -3589,6 +3599,7 @@ function renderMatchDetail(){
   matchDetailEmpty.classList.add("hidden");
   matchFormRow.classList.remove("hidden");
   matchDetailContent.classList.remove("hidden");
+  liveEditingOpen = false;
   ensureStatsForMatch(currentMatch);
   liveSelected = null; liveCambioOut = null;
   ensureLive(currentMatch);
