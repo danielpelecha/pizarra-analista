@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-4">
+<meta name="app-version" content="2026-09-06-5">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -649,11 +649,17 @@
     padding:10px; font-size:14px; font-family:inherit; box-sizing:border-box;
     resize:vertical; overflow:hidden;
   }
+  .report-notes-print{ display:none; }
   @media print{
     body > *:not(#reportOverlay){ display:none !important; }
     #reportOverlay{ position:static; overflow:visible; }
     .report-toolbar{ display:none !important; }
-    .report-notes-box{ border:1px solid #999; height:auto !important; overflow:visible !important; }
+    .report-notes-box{ display:none !important; }
+    .report-notes-print{
+      display:block !important; white-space:pre-wrap; word-wrap:break-word;
+      border:1px solid #999; border-radius:8px; padding:10px; font-size:14px;
+      font-family:inherit; page-break-inside:auto;
+    }
   }
   .stat-manager-key{ font-size:12px; color:var(--grey); }
 
@@ -2725,6 +2731,7 @@ function buildMatchReportHTML(match){
     ${comparativaHtml}
     <p class="report-section-title">📊 Lectura rápida (editable)</p>
     <textarea id="reportQuickReadBox" class="report-notes-box" style="min-height:60px;" placeholder="Resumen breve para la charla...">${escapeHtml(match.live.reportQuickRead !== undefined ? match.live.reportQuickRead : sugerenciaLectura)}</textarea>
+    <div id="reportQuickReadPrint" class="report-notes-print"></div>
     ` : ""}
 
     <p class="report-section-title">Cuadro de mando del equipo</p>
@@ -2744,6 +2751,7 @@ function buildMatchReportHTML(match){
 
     <p class="report-section-title">📝 Notas del entrenador</p>
     <textarea id="reportNotesBox" class="report-notes-box" placeholder="Conclusiones generales del partido, foco de la próxima semana...">${escapeHtml(match.live.reportNotes || "")}</textarea>
+    <div id="reportNotesPrint" class="report-notes-print"></div>
   `;
 
   // Las cajas de texto crecen solas mientras escribes (sin límite de líneas ni scroll
@@ -2780,9 +2788,9 @@ document.getElementById("reportCloseBtn").addEventListener("click", ()=>{
   reportOverlay.classList.add("hidden");
 });
 document.getElementById("reportPrintBtn").addEventListener("click", ()=>{
-  ["reportNotesBox", "reportQuickReadBox"].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el){ el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }
+  [["reportNotesBox","reportNotesPrint"], ["reportQuickReadBox","reportQuickReadPrint"]].forEach(([boxId, printId])=>{
+    const box = document.getElementById(boxId), printEl = document.getElementById(printId);
+    if(box && printEl) printEl.textContent = box.value;
   });
   window.print();
 });
