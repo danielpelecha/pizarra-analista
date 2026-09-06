@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-1">
+<meta name="app-version" content="2026-09-06-2">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -578,6 +578,8 @@
     width:48px; border:1px solid var(--border); border-radius:6px;
     padding:4px 6px; font-size:13px; text-align:center;
   }
+  .stat-informe-wrap{ display:flex; align-items:center; gap:4px; cursor:pointer; white-space:nowrap; }
+  .stat-informe-label{ font-size:12px; color:var(--navy); font-weight:bold; }
   .mvp-panel{
     background:var(--navy); border-radius:10px; padding:16px 18px; margin-top:12px;
   }
@@ -622,6 +624,20 @@
     padding:5px 10px; border-radius:6px; margin:10px 0 4px;
   }
   .report-half-title:first-child{ margin-top:0; }
+  .report-compare-heads{
+    display:grid; grid-template-columns:1fr 130px 1fr; text-align:center;
+    font-size:11px; font-weight:bold; color:var(--grey); margin-bottom:4px;
+  }
+  .report-compare-row{
+    display:grid; grid-template-columns:1fr 130px 1fr; align-items:center;
+    gap:6px; margin-bottom:4px;
+  }
+  .report-compare-num{
+    font-size:18px; font-weight:bold; text-align:center; border-radius:6px; padding:6px;
+  }
+  .report-compare-num.pos{ background:#eaf7ef; color:var(--success); }
+  .report-compare-num.neg{ background:#fdeceb; color:var(--danger); }
+  .report-compare-label{ font-size:12px; color:var(--grey); text-align:center; }
   .report-event{ display:flex; gap:8px; padding:4px 8px; border-radius:5px; font-size:13px; align-items:baseline; }
   .report-event.pos{ background:#eaf7ef; }
   .report-event.neg{ background:#fdeceb; }
@@ -2364,6 +2380,24 @@ function renderStatManager(){
       });
       mvpWrap.appendChild(mvpInput);
       row.appendChild(mvpWrap);
+
+      const informeWrap = document.createElement("label");
+      informeWrap.className = "stat-informe-wrap";
+      const informeCheck = document.createElement("input");
+      informeCheck.type = "checkbox";
+      informeCheck.checked = !!col.informe_destacada;
+      informeCheck.addEventListener("change", async ()=>{
+        col.informe_destacada = informeCheck.checked;
+        const { error } = await supabase.from("stat_columns").update({ informe_destacada: informeCheck.checked }).eq("id", col.id);
+        if(error) showMsg(matchMsg, "No se ha podido guardar: " + error.message, "error");
+      });
+      informeWrap.appendChild(informeCheck);
+      const informeLbl = document.createElement("span");
+      informeLbl.className = "stat-informe-label";
+      informeLbl.textContent = "📄 Informe";
+      informeLbl.title = "Incluir esta estadística en la comparativa 1ª vs 2ª parte del informe de partido";
+      informeWrap.appendChild(informeLbl);
+      row.appendChild(informeWrap);
     }
 
     // ---- Arrastrar (ratón y dedo) con desplazamiento en bloque del resto de filas ----
@@ -2585,20 +2619,65 @@ function buildMatchReportHTML(match){
   // minuto (con un margen mínimo de error solo si algo ocurrió justo en el minuto del
   // cambio de parte). Sin el punto de corte guardado (partidos muy antiguos), no se separa.
   const cutoff = match.live.half2StartSeconds;
+  const eventTime = ev=> ev.second !== undefined ? ev.second : ev.minute * 60;
+  let half1Events = [], half2Events = [];
   let timelineHtml;
   if(cutoff === null || cutoff === undefined){
     const eventsSorted = [...match.live.events].sort((a,b)=> a.minute - b.minute);
     timelineHtml = eventsSorted.map(buildEventLineHtml).join("");
   } else {
-    const eventTime = ev=> ev.second !== undefined ? ev.second : ev.minute * 60;
-    const half1 = match.live.events.filter(ev=> eventTime(ev) < cutoff).sort((a,b)=> eventTime(a) - eventTime(b));
-    const half2 = match.live.events.filter(ev=> eventTime(ev) >= cutoff).sort((a,b)=> eventTime(a) - eventTime(b));
+    half1Events = match.live.events.filter(ev=> eventTime(ev) < cutoff).sort((a,b)=> eventTime(a) - eventTime(b));
+    half2Events = match.live.events.filter(ev=> eventTime(ev) >= cutoff).sort((a,b)=> eventTime(a) - eventTime(b));
     timelineHtml = `
       <p class="report-half-title">▶ 1ª parte</p>
-      ${half1.length ? half1.map(buildEventLineHtml).join("") : '<p class="hint">Sin eventos en la 1ª parte.</p>'}
+      ${half1Events.length ? half1Events.map(buildEventLineHtml).join("") : '<p class="hint">Sin eventos en la 1ª parte.</p>'}
       <p class="report-half-title">▶ 2ª parte</p>
-      ${half2.length ? half2.map(buildEventLineHtml).join("") : '<p class="hint">Sin eventos en la 2ª parte.</p>'}
+      ${half2Events.length ? half2Events.map(buildEventLineHtml).join("") : '<p class="hint">Sin eventos en la 2ª parte.</p>'}
     `;
+  }
+
+  // Comparativa 1a vs 2a parte: solo con las estadisticas marcadas "📄 Informe" en
+  // Organizar estadisticas (configuracion independiente de las destacadas del marcador
+  // en vivo). Cuenta cuantas veces aparece cada estadistica en los eventos de cada mitad.
+  function countInHalf(events, col){
+    return events.filter(ev=>{
+      if(ev.type === "cambio") return false;
+      if(ev.type === "team_stat" || ev.type === "custom") return ev.key === col.key;
+      return fixedKeyMap[ev.type] === col.key;
+    }).length;
+  }
+  const informeCols = statColumns.filter(c=> c.informe_destacada);
+  const informePos = informeCols.filter(c=> c.grupo === "positiva");
+  const informeNeg = informeCols.filter(c=> c.grupo === "negativa");
+  let comparativaHtml = "";
+  let sugerenciaLectura = "";
+  if(cutoff !== null && cutoff !== undefined && informeCols.length > 0){
+    const filas = (cols, tono)=> cols.map(c=>{
+      const h1 = countInHalf(half1Events, c), h2 = countInHalf(half2Events, c);
+      return `<div class="report-compare-row">
+        <div class="report-compare-num ${tono}">${h1}</div>
+        <div class="report-compare-label">${escapeHtml(c.label)}</div>
+        <div class="report-compare-num ${tono}">${h2}</div>
+      </div>`;
+    }).join("");
+    comparativaHtml = `
+      <p class="report-section-title">Comparativa 1ª vs 2ª parte</p>
+      <div class="report-compare-heads"><span>1ª PARTE</span><span></span><span>2ª PARTE</span></div>
+      ${filas(informePos, "pos")}
+      ${filas(informeNeg, "neg")}
+    `;
+    // Frase automatica: compara el total de positivas y de negativas entre las dos partes.
+    const sumPos1 = informePos.reduce((s,c)=> s + countInHalf(half1Events, c), 0);
+    const sumPos2 = informePos.reduce((s,c)=> s + countInHalf(half2Events, c), 0);
+    const sumNeg1 = informeNeg.reduce((s,c)=> s + countInHalf(half1Events, c), 0);
+    const sumNeg2 = informeNeg.reduce((s,c)=> s + countInHalf(half2Events, c), 0);
+    const fraseAtaque = sumPos2 > sumPos1 ? "Mejoramos en ataque en la 2ª parte respecto a la 1ª."
+      : sumPos2 < sumPos1 ? "Bajamos en ataque en la 2ª parte respecto a la 1ª."
+      : "Mantuvimos el mismo nivel de ataque en las dos partes.";
+    const fraseDefensa = sumNeg2 < sumNeg1 ? "Defensivamente mejoramos en la 2ª parte."
+      : sumNeg2 > sumNeg1 ? "Defensivamente empeoramos en la 2ª parte."
+      : "Defensivamente seguimos igual en las dos partes.";
+    sugerenciaLectura = `${fraseAtaque} ${fraseDefensa}`.trim();
   }
 
   // Tabla individual: todas las estadisticas configuradas (excepto "minutos", que va aparte),
@@ -2641,6 +2720,12 @@ function buildMatchReportHTML(match){
     </div>
     <div class="report-score">${escapeHtml(izquierda)} ${golesIzq} - ${golesDer} ${escapeHtml(derecha)}</div>
 
+    ${comparativaHtml ? `
+    ${comparativaHtml}
+    <p class="report-section-title">📊 Lectura rápida (editable)</p>
+    <textarea id="reportQuickReadBox" class="report-notes-box" style="min-height:60px;" placeholder="Resumen breve para la charla...">${escapeHtml(match.live.reportQuickRead !== undefined ? match.live.reportQuickRead : sugerenciaLectura)}</textarea>
+    ` : ""}
+
     <p class="report-section-title">Cuadro de mando del equipo</p>
     <div class="report-pill-row">${pillsHtml(d.positivas, "pos")}${pillsHtml(d.negativas, "neg")}</div>
 
@@ -2665,6 +2750,13 @@ function buildMatchReportHTML(match){
     match.live.reportNotes = notesBox.value;
     saveMatch(match);
   });
+  const quickReadBox = document.getElementById("reportQuickReadBox");
+  if(quickReadBox){
+    quickReadBox.addEventListener("change", ()=>{
+      match.live.reportQuickRead = quickReadBox.value;
+      saveMatch(match);
+    });
+  }
 }
 
 document.getElementById("reportBtn").addEventListener("click", ()=>{
