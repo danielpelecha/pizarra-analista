@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-5">
+<meta name="app-version" content="2026-09-06-6">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -603,7 +603,7 @@
     position:sticky; top:0; z-index:1; background:#fff; border-bottom:2px solid var(--navy);
     display:flex; justify-content:space-between; gap:10px; padding:10px 16px;
   }
-  .report-content{ max-width:820px; margin:0 auto; padding:20px; }
+  .report-content{ max-width:1050px; margin:0 auto; padding:20px; }
   .report-header{ display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:6px; }
   .report-header img{ width:60px; height:60px; object-fit:contain; }
   .report-header .club-info{ text-align:left; }
@@ -624,20 +624,21 @@
     padding:5px 10px; border-radius:6px; margin:10px 0 4px;
   }
   .report-half-title:first-child{ margin-top:0; }
+  .report-timeline-cols{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
   .report-compare-heads{
-    display:grid; grid-template-columns:1fr 130px 1fr; text-align:center;
-    font-size:11px; font-weight:bold; color:var(--grey); margin-bottom:4px;
+    display:grid; grid-template-columns:100px 1fr 100px; text-align:center;
+    font-size:12px; font-weight:bold; color:var(--grey); margin-bottom:8px;
   }
   .report-compare-row{
-    display:grid; grid-template-columns:1fr 130px 1fr; align-items:center;
-    gap:6px; margin-bottom:4px;
+    display:grid; grid-template-columns:100px 1fr 100px; align-items:center;
+    gap:10px; margin-bottom:6px;
   }
   .report-compare-num{
-    font-size:18px; font-weight:bold; text-align:center; border-radius:6px; padding:6px;
+    font-size:22px; font-weight:bold; text-align:center; border-radius:8px; padding:10px;
   }
   .report-compare-num.pos{ background:#eaf7ef; color:var(--success); }
   .report-compare-num.neg{ background:#fdeceb; color:var(--danger); }
-  .report-compare-label{ font-size:12px; color:var(--grey); text-align:center; }
+  .report-compare-label{ font-size:13px; color:var(--navy); text-align:center; }
   .report-event{ display:flex; gap:8px; padding:4px 8px; border-radius:5px; font-size:13px; align-items:baseline; }
   .report-event.pos{ background:#eaf7ef; }
   .report-event.neg{ background:#fdeceb; }
@@ -650,6 +651,7 @@
     resize:vertical; overflow:hidden;
   }
   .report-notes-print{ display:none; }
+  @page{ size: landscape; }
   @media print{
     body > *:not(#reportOverlay){ display:none !important; }
     #reportOverlay{ position:static; overflow:visible; }
@@ -2636,10 +2638,16 @@ function buildMatchReportHTML(match){
     half1Events = match.live.events.filter(ev=> eventTime(ev) < cutoff).sort((a,b)=> eventTime(a) - eventTime(b));
     half2Events = match.live.events.filter(ev=> eventTime(ev) >= cutoff).sort((a,b)=> eventTime(a) - eventTime(b));
     timelineHtml = `
-      <p class="report-half-title">▶ 1ª parte</p>
-      ${half1Events.length ? half1Events.map(buildEventLineHtml).join("") : '<p class="hint">Sin eventos en la 1ª parte.</p>'}
-      <p class="report-half-title">▶ 2ª parte</p>
-      ${half2Events.length ? half2Events.map(buildEventLineHtml).join("") : '<p class="hint">Sin eventos en la 2ª parte.</p>'}
+      <div class="report-timeline-cols">
+        <div>
+          <p class="report-half-title">▶ 1ª parte</p>
+          ${half1Events.length ? half1Events.map(buildEventLineHtml).join("") : '<p class="hint">Sin eventos en la 1ª parte.</p>'}
+        </div>
+        <div>
+          <p class="report-half-title">▶ 2ª parte</p>
+          ${half2Events.length ? half2Events.map(buildEventLineHtml).join("") : '<p class="hint">Sin eventos en la 2ª parte.</p>'}
+        </div>
+      </div>
     `;
   }
 
@@ -2692,7 +2700,7 @@ function buildMatchReportHTML(match){
   const statCols = statColumns.filter(c=> c.key !== "minutos");
   const playedPlayers = players.filter(p=> match.stats[p.id] && (match.stats[p.id].minutos || 0) > 0);
   const tableHtml = `
-    <table class="data-table" style="font-size:12px;">
+    <table class="data-table" style="font-size:11px;">
       <thead><tr><th>Jugador</th><th>Min</th>${statCols.map(c=> `<th>${escapeHtml(c.label)}</th>`).join("")}</tr></thead>
       <tbody>
         ${playedPlayers.map(p=>{
