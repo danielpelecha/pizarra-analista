@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-2">
+<meta name="app-version" content="2026-09-06-3">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -646,13 +646,14 @@
   .report-sub{ font-size:13px; margin:4px 0; }
   .report-notes-box{
     width:100%; min-height:90px; border:2px solid var(--border); border-radius:8px;
-    padding:10px; font-size:14px; font-family:inherit; box-sizing:border-box; resize:vertical;
+    padding:10px; font-size:14px; font-family:inherit; box-sizing:border-box;
+    resize:vertical; overflow:hidden;
   }
   @media print{
     body > *:not(#reportOverlay){ display:none !important; }
     #reportOverlay{ position:static; overflow:visible; }
     .report-toolbar{ display:none !important; }
-    .report-notes-box{ border:1px solid #999; }
+    .report-notes-box{ border:1px solid #999; height:auto !important; overflow:visible !important; }
   }
   .stat-manager-key{ font-size:12px; color:var(--grey); }
 
@@ -2745,13 +2746,24 @@ function buildMatchReportHTML(match){
     <textarea id="reportNotesBox" class="report-notes-box" placeholder="Conclusiones generales del partido, foco de la próxima semana...">${escapeHtml(match.live.reportNotes || "")}</textarea>
   `;
 
+  // Las cajas de texto crecen solas mientras escribes (sin límite de líneas ni scroll
+  // interno), tanto para verlo todo en pantalla como para que salga completo al imprimir.
+  function autoResizeTextarea(el){
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  }
+
   const notesBox = document.getElementById("reportNotesBox");
+  autoResizeTextarea(notesBox);
+  notesBox.addEventListener("input", ()=> autoResizeTextarea(notesBox));
   notesBox.addEventListener("change", ()=>{
     match.live.reportNotes = notesBox.value;
     saveMatch(match);
   });
   const quickReadBox = document.getElementById("reportQuickReadBox");
   if(quickReadBox){
+    autoResizeTextarea(quickReadBox);
+    quickReadBox.addEventListener("input", ()=> autoResizeTextarea(quickReadBox));
     quickReadBox.addEventListener("change", ()=>{
       match.live.reportQuickRead = quickReadBox.value;
       saveMatch(match);
@@ -2767,7 +2779,13 @@ document.getElementById("reportBtn").addEventListener("click", ()=>{
 document.getElementById("reportCloseBtn").addEventListener("click", ()=>{
   reportOverlay.classList.add("hidden");
 });
-document.getElementById("reportPrintBtn").addEventListener("click", ()=> window.print());
+document.getElementById("reportPrintBtn").addEventListener("click", ()=>{
+  ["reportNotesBox", "reportQuickReadBox"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){ el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }
+  });
+  window.print();
+});
 
 mvpBtn.addEventListener("click", ()=>{
   if(!currentMatch) return;
