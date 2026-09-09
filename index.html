@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-16">
+<meta name="app-version" content="2026-09-06-17">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -979,6 +979,23 @@
             </select>
             <p class="hint">Si cambias de disposición, los jugadores ya elegidos se mantienen y solo se recolocan.</p>
 
+            <div style="display:flex; gap:10px; margin-top:10px;">
+              <div style="flex:1;">
+                <label for="pitchShapeSelect">Forma del campo</label>
+                <select id="pitchShapeSelect">
+                  <option value="completo">Campo completo</option>
+                  <option value="medio">Medio campo (para ABP)</option>
+                </select>
+              </div>
+              <div style="flex:1;">
+                <label for="pitchColorSelect">Color del campo</label>
+                <select id="pitchColorSelect">
+                  <option value="verde">Verde</option>
+                  <option value="blanco">Blanco (ahorra tinta)</option>
+                </select>
+              </div>
+            </div>
+
             <div class="pos-group">
               <h3>Once titular</h3>
               <div id="startersList"></div>
@@ -986,13 +1003,13 @@
 
             <div class="pos-group subs-list">
               <h3>Suplentes (hasta 19)</h3>
-              <p class="hint">Hasta 30 jugadores convocados en total (11 titulares + 19 suplentes). Deja filas vacías si no llegas a ese número.</p>
+              <p class="hint">Hasta 30 jugadores convocados en total (11 titulares + 19 suplentes). Deja filas vacías si no llegas a ese número. En "Medio campo" no se muestran, para dejar toda la hoja a la jugada.</p>
               <div id="subsList"></div>
             </div>
           </div>
 
           <div class="lineup-pitch-col">
-            <canvas id="pitchCanvas" width="900" height="1700"></canvas>
+            <canvas id="pitchCanvas" width="900" height="1273"></canvas>
             <div>
               <button class="btn download-btn-lineup" id="downloadLineupBtn" style="width:auto; margin-top:16px;">⬇️ Descargar alineación (PNG)</button>
               <button class="btn download-btn-lineup" id="downloadLineupPdfBtn" style="width:auto; margin-top:16px; margin-left:8px; background:var(--navy);">⬇️ Descargar alineación (PDF)</button>
@@ -1682,6 +1699,10 @@ function flattenSlots(layoutKey){
 
 // Rellenar el selector de disposición con optgroups (igual que la herramienta anterior)
 const formationSelect = document.getElementById("formationSelect");
+const pitchShapeSelect = document.getElementById("pitchShapeSelect");
+const pitchColorSelect = document.getElementById("pitchColorSelect");
+pitchShapeSelect.addEventListener("change", drawPitch);
+pitchColorSelect.addEventListener("change", drawPitch);
 const optgroupSistemas = document.getElementById("optgroupSistemas");
 const optgroupABP = document.getElementById("optgroupABP");
 Object.keys(FORMATIONS).forEach(k=>{
@@ -2037,143 +2058,178 @@ function getCrestImage(){
 
 function pitchGeom(){
   const W = pitchCanvas.width, H = pitchCanvas.height;
-  const HEADER_H = 195, PITCH_TOP = HEADER_H + 8, PITCH_BOTTOM = H - 560, PITCH_LEFT = 30, PITCH_RIGHT = W - 30;
-  const SUBS_TOP = H - 540;
-  return { W, H, HEADER_H, PITCH_TOP, PITCH_BOTTOM, PITCH_LEFT, PITCH_RIGHT, SUBS_TOP };
+  const MARGIN = 6;
+  const shape = pitchShapeSelect.value;
+
+  if(shape === "medio"){
+    // Medio campo: sin cabecera de suplentes, el campo ocupa casi toda la hoja.
+    // El escudo se solapa con la parte superior, dentro del margen.
+    const PITCH_TOP = 120, PITCH_BOTTOM = H - MARGIN, PITCH_LEFT = MARGIN, PITCH_RIGHT = W - MARGIN;
+    return { W, H, MARGIN, PITCH_TOP, PITCH_BOTTOM, PITCH_LEFT, PITCH_RIGHT, SUBS_TOP: null, shape };
+  }
+
+  // Campo completo: el hueco de suplentes crece o se encoge segun cuantos haya convocados,
+  // para que el campo siga siendo lo mas grande posible con pocos suplentes.
+  const subsCount = lineupSubs.filter(id=> !!id).length;
+  const SUBS_COLS = 5, SUBS_ROW_H = 42, SUBS_LABEL_H = 54;
+  const subsRows = subsCount > 0 ? Math.ceil(subsCount / SUBS_COLS) : 0;
+  const SUBS_AREA_H = subsCount > 0 ? (SUBS_LABEL_H + subsRows*SUBS_ROW_H + 16) : 0;
+
+  const PITCH_TOP = 120, PITCH_BOTTOM = H - MARGIN - SUBS_AREA_H, PITCH_LEFT = MARGIN, PITCH_RIGHT = W - MARGIN;
+  const SUBS_TOP = PITCH_BOTTOM + 10;
+  return { W, H, MARGIN, PITCH_TOP, PITCH_BOTTOM, PITCH_LEFT, PITCH_RIGHT, SUBS_TOP, SUBS_COLS, SUBS_ROW_H, shape };
+}
+
+// Dibuja un escudo con forma de blasón (silueta), con la imagen del club dentro si existe.
+function drawShieldCrest(ctx, cx, topY, w, h){
+  const x0 = cx - w/2, x1 = cx + w/2;
+  ctx.beginPath();
+  ctx.moveTo(x0, topY);
+  ctx.lineTo(x1, topY);
+  ctx.lineTo(x1, topY + h*0.55);
+  ctx.quadraticCurveTo(x1, topY + h*0.85, cx, topY + h);
+  ctx.quadraticCurveTo(x0, topY + h*0.85, x0, topY + h*0.55);
+  ctx.closePath();
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "#0d1b3e";
+  ctx.stroke();
+
+  const crestImg = getCrestImage();
+  if(crestImg && crestImg.complete && crestImg.naturalWidth){
+    const innerH = h*0.62;
+    const ratio = innerH / crestImg.naturalHeight;
+    const cw = crestImg.naturalWidth * ratio;
+    ctx.drawImage(crestImg, cx-cw/2, topY+h*0.08, cw, innerH);
+  } else {
+    ctx.fillStyle = "#0d1b3e";
+    ctx.font = `bold ${Math.round(h*0.22)}px Arial`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("AFV", cx, topY+h*0.4);
+  }
 }
 
 function drawPitch(){
-  const { W, H, HEADER_H, PITCH_TOP, PITCH_BOTTOM, PITCH_LEFT, PITCH_RIGHT, SUBS_TOP } = pitchGeom();
+  const geom = pitchGeom();
+  const { W, H, MARGIN, PITCH_TOP, PITCH_BOTTOM, PITCH_LEFT, PITCH_RIGHT, SUBS_TOP, shape } = geom;
   const ctx = pitchCtx;
+  const isVerde = pitchColorSelect.value !== "blanco";
+  const fieldFill = isVerde ? "#2f7a3c" : "#ffffff";
+  const lineColor = isVerde ? "rgba(255,255,255,0.9)" : "#1a4d8f";
+  const nameColor = "#0a0a0a";
 
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0,0,W,H);
 
-  // ---- Cabecera: escudo + datos del partido ----
-  ctx.fillStyle = "#ebf2fa";
-  ctx.fillRect(0,0,W,HEADER_H);
-
-  const crestImg = getCrestImage();
-  if(crestImg && crestImg.complete && crestImg.naturalWidth){
-    const crestH = 95;
-    const ratio = crestH / crestImg.naturalHeight;
-    const cw = crestImg.naturalWidth * ratio;
-    ctx.drawImage(crestImg, (W-cw)/2, 10, cw, crestH);
-  }
-
-  ctx.fillStyle = "#0d1b3e";
-  ctx.font = "bold 26px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "alphabetic";
-  ctx.fillText(((currentClub && currentClub.name) || "MI CLUB").toUpperCase(), W/2, 128);
-
+  // ---- Datos del partido: texto pequeño en las esquinas, sin bloque de cabecera aparte ----
   const fecha = fmtFecha(matchFecha.value);
-  const hora = matchHora.value;
-  const rival = matchRival.value || "RIVAL POR CONFIRMAR";
+  const rival = (matchRival.value || "RIVAL POR CONFIRMAR").toUpperCase();
   const condicion = matchCondicion.value;
-  let infoText = `${fecha}   ·   ${hora ? hora+"h" : ""}   ·   ${condicion} vs ${rival.toUpperCase()}`;
-  let infoSize = 22;
-  ctx.font = `bold ${infoSize}px Arial`;
-  while(ctx.measureText(infoText).width > W-60 && infoSize>14){
-    infoSize -= 1;
-    ctx.font = `bold ${infoSize}px Arial`;
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = "#0d1b3e";
+  ctx.font = "bold 19px Arial";
+  ctx.textAlign = "left";
+  ctx.fillText(`${condicion} vs ${rival}`, MARGIN+18, 40);
+  ctx.textAlign = "right";
+  ctx.font = "bold 19px Arial";
+  ctx.fillText("FECHA: " + fecha, W-MARGIN-18, 40);
+  if(shape === "medio"){
+    ctx.textAlign = "center";
+    ctx.font = "bold 17px Arial";
+    ctx.fillStyle = "#787878";
+    ctx.fillText(formationSelect.value, W/2, 32);
   }
-  ctx.fillStyle = "#141414";
-  ctx.fillText(infoText, W/2, 158);
-
-  ctx.font = "16px Arial";
-  ctx.fillStyle = "#787878";
-  ctx.fillText(formationSelect.value, W/2, 182);
 
   // ---- Campo ----
-  ctx.fillStyle = "#1f8a3c";
-  ctx.fillRect(PITCH_LEFT-10, PITCH_TOP-10, (PITCH_RIGHT-PITCH_LEFT)+20, (PITCH_BOTTOM-PITCH_TOP)+20);
-
-  ctx.strokeStyle = "rgba(255,255,255,0.9)";
+  ctx.fillStyle = fieldFill;
+  ctx.fillRect(PITCH_LEFT, PITCH_TOP, PITCH_RIGHT-PITCH_LEFT, PITCH_BOTTOM-PITCH_TOP);
+  ctx.strokeStyle = lineColor;
   ctx.lineWidth = 3;
   ctx.strokeRect(PITCH_LEFT, PITCH_TOP, PITCH_RIGHT-PITCH_LEFT, PITCH_BOTTOM-PITCH_TOP);
-  const midY = (PITCH_TOP+PITCH_BOTTOM)/2;
-  ctx.beginPath(); ctx.moveTo(PITCH_LEFT, midY); ctx.lineTo(PITCH_RIGHT, midY); ctx.stroke();
-  ctx.beginPath(); ctx.arc(W/2, midY, 70, 0, Math.PI*2); ctx.stroke();
 
-  const boxW = 320, boxH = 130, smallW = 150, smallH = 55;
-  ctx.strokeRect(W/2-boxW/2, PITCH_TOP, boxW, boxH);
-  ctx.strokeRect(W/2-smallW/2, PITCH_TOP, smallW, smallH);
-  ctx.strokeRect(W/2-boxW/2, PITCH_BOTTOM-boxH, boxW, boxH);
-  ctx.strokeRect(W/2-smallW/2, PITCH_BOTTOM-smallH, smallW, smallH);
+  const fieldW = PITCH_RIGHT-PITCH_LEFT, fieldH = PITCH_BOTTOM-PITCH_TOP;
+  const boxW = fieldW*0.42, smallW = fieldW*0.2, boxH = fieldH*0.09, smallH = fieldH*0.045;
 
-  // ---- Jugadores titulares (posiciones arrastrables) ----
-  const playH = PITCH_BOTTOM - PITCH_TOP;
+  if(shape === "medio"){
+    // Solo el área de ataque (mitad superior de un campo real): un único área grande arriba.
+    ctx.strokeRect(W/2-boxW/2, PITCH_TOP, boxW, boxH);
+    ctx.strokeRect(W/2-smallW/2, PITCH_TOP, smallW, smallH);
+    ctx.beginPath();
+    ctx.arc(W/2, PITCH_TOP+boxH, fieldW*0.075, 0.15*Math.PI, 0.85*Math.PI);
+    ctx.stroke();
+  } else {
+    const midY = (PITCH_TOP+PITCH_BOTTOM)/2;
+    ctx.beginPath(); ctx.moveTo(PITCH_LEFT, midY); ctx.lineTo(PITCH_RIGHT, midY); ctx.stroke();
+    ctx.beginPath(); ctx.arc(W/2, midY, fieldW*0.09, 0, Math.PI*2); ctx.stroke();
+    ctx.strokeRect(W/2-boxW/2, PITCH_TOP, boxW, boxH);
+    ctx.strokeRect(W/2-smallW/2, PITCH_TOP, smallW, smallH);
+    ctx.strokeRect(W/2-boxW/2, PITCH_BOTTOM-boxH, boxW, boxH);
+    ctx.strokeRect(W/2-smallW/2, PITCH_BOTTOM-smallH, smallW, smallH);
+  }
+
+  // ---- Escudo: blasón solapado con la parte superior del campo ----
+  drawShieldCrest(ctx, W/2, PITCH_TOP-70, 130, 155);
+
+  // ---- Jugadores (en medio campo, solo los que caen en la mitad de ataque, y en tamaño mayor) ----
+  const MEDIO_CUTOFF = 0.55;
   starterPositions.forEach((slot, idx)=>{
-    const cx = PITCH_LEFT + slot.x*(PITCH_RIGHT-PITCH_LEFT);
-    const cy = PITCH_TOP + slot.y*playH;
+    let y = slot.y;
+    if(shape === "medio"){
+      if(y > MEDIO_CUTOFF) return; // se queda fuera del recorte de medio campo (p.ej. portero muy retrasado)
+      y = y / MEDIO_CUTOFF;
+    }
+    const cx = PITCH_LEFT + slot.x*fieldW;
+    const cy = PITCH_TOP + y*fieldH;
     const player = players.find(p=> p.id === lineupStarters[idx]);
-    const radius = 26;
+    const radius = shape === "medio" ? fieldW*0.052 : fieldW*0.038;
 
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI*2);
-    ctx.fillStyle = slot.isGK ? "#facc15" : "#2563eb";
+    ctx.fillStyle = slot.isGK ? "#e6a817" : "#185fa5";
     ctx.fill();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "#0d1b3e";
+    ctx.lineWidth = radius*0.14;
+    ctx.strokeStyle = "#ffffff";
     ctx.stroke();
 
-    ctx.fillStyle = slot.isGK ? "#141414" : "#ffffff";
-    ctx.font = "bold 22px Arial";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `bold ${Math.round(radius*0.62)}px Arial`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(player ? (player.num || "") : "", cx, cy+1);
 
     const label = (player ? displayAlias(player) : slot.label).toUpperCase();
-    ctx.font = "bold 15px Arial";
-    const tw = ctx.measureText(label).width;
-    const padX=8, padY=4, chipH=15+2*padY, chipTop = cy+radius+6;
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "#0d1b3e";
-    ctx.lineWidth = 1.5;
-    roundRectPath(ctx, cx-tw/2-padX, chipTop, tw+2*padX, chipH, 6);
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "#0d1b3e";
-    ctx.textBaseline = "middle";
-    ctx.fillText(label, cx, chipTop+chipH/2+1);
+    ctx.fillStyle = nameColor;
+    ctx.font = `bold ${Math.round(radius*0.6)}px Arial`;
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText(label, cx, cy+radius+ radius*0.75);
   });
 
-  // ---- Suplentes (hasta 19, en 3 columnas) ----
-  ctx.fillStyle = "#ebf2fa";
-  ctx.fillRect(0, SUBS_TOP, W, H-SUBS_TOP);
-  ctx.fillStyle = "#0d1b3e";
-  ctx.font = "bold 24px Arial";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "alphabetic";
-  ctx.fillText("SUPLENTES", W/2, SUBS_TOP+34);
+  // ---- Suplentes: solo texto (sin círculos), en gris, en rejilla de hasta 5 columnas ----
+  if(shape !== "medio" && SUBS_TOP !== null){
+    const withSubs = lineupSubs.filter(id=> !!id);
+    if(withSubs.length > 0){
+      ctx.fillStyle = "#c0392b";
+      ctx.font = "bold 20px Arial";
+      ctx.textAlign = "left";
+      ctx.fillText("SUPLENTES:", MARGIN+18, SUBS_TOP+20);
 
-  const subsCols = 3;
-  const colW = (W-80)/subsCols;
-  const rowH = 40;
-  const startY = SUBS_TOP+62;
-  let shown = 0;
-  lineupSubs.forEach((id)=>{
-    const player = players.find(p=> p.id === id);
-    if(!player) return;
-    const col = shown % subsCols, row = Math.floor(shown/subsCols);
-    const x = 40 + col*colW, y = startY + row*rowH;
-
-    ctx.beginPath();
-    ctx.arc(x+18, y+14, 17, 0, Math.PI*2);
-    ctx.fillStyle = "#2563eb"; ctx.fill();
-    ctx.strokeStyle = "#0d1b3e"; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 16px Arial";
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(player.num || "", x+18, y+15);
-
-    ctx.fillStyle = "#141414";
-    ctx.font = "bold 17px Arial";
-    ctx.textAlign = "left";
-    ctx.fillText(displayAlias(player).toUpperCase(), x+42, y+15);
-    shown++;
-  });
+      const cols = geom.SUBS_COLS, rowH = geom.SUBS_ROW_H;
+      const colW = (W - 2*MARGIN - 36) / cols;
+      const startY = SUBS_TOP + 20 + rowH;
+      ctx.font = "bold 19px Arial";
+      ctx.fillStyle = "#8a8a8a";
+      withSubs.forEach((id, i)=>{
+        const player = players.find(p=> p.id === id);
+        if(!player) return;
+        const col = i % cols, row = Math.floor(i/cols);
+        const x = MARGIN+18 + col*colW, y = startY + row*rowH;
+        const text = (player.num ? player.num+" " : "") + displayAlias(player);
+        ctx.fillText(text, x, y);
+      });
+    }
+  }
 }
 
 // ---------------- Arrastrar jugadores sobre el campo (ratón y dedo) ----------------
@@ -2203,6 +2259,7 @@ function findNearestStarter(px, py){
 }
 
 pitchCanvas.addEventListener("pointerdown", (evt)=>{
+  if(pitchShapeSelect.value === "medio") return; // en medio campo las posiciones no se arrastran, solo se ven mas grandes
   const pos = canvasPosFromEvent(evt);
   const idx = findNearestStarter(pos.x, pos.y);
   if(idx >= 0){
@@ -2255,12 +2312,10 @@ document.getElementById("downloadLineupPdfBtn").addEventListener("click", ()=>{
   }
   const { jsPDF } = window.jspdf;
   const rivalSlug = (matchRival.value || "alineacion").trim().replace(/\s+/g,"_");
-  // El PDF se dimensiona en milimetros a partir de las proporciones reales del canvas
-  // (900x1700px), para que la imagen ocupe toda la pagina sin deformarse ni recortarse.
-  const pageWidthMm = 190;
-  const pageHeightMm = pageWidthMm * (pitchCanvas.height / pitchCanvas.width);
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: [pageWidthMm + 20, pageHeightMm + 20] });
-  doc.addImage(pitchCanvas.toDataURL("image/png"), "PNG", 10, 10, pageWidthMm, pageHeightMm);
+  // El canvas ya tiene la proporcion real de un A4 (210x297mm), asi que la imagen ocupa
+  // la pagina entera de borde a borde, sin deformarse ni quedar pequeña en una esquina.
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  doc.addImage(pitchCanvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297);
   doc.save(`alineacion_${rivalSlug}.pdf`);
 });
 
