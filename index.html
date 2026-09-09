@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-12">
+<meta name="app-version" content="2026-09-06-13">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -3094,6 +3094,15 @@ function buildLiveChip(p, match, zone, isSentOff){
   return chip;
 }
 
+// Desplaza el registro del partido hasta el final, para que la ultima anotacion quede
+// siempre visible. Se usa SOLO al anotar algo nuevo (estadistica o cambio confirmado),
+// nunca al editar, poner una nota o borrar — para no "secuestrar" la vista si el
+// entrenador está corrigiendo algo de hace rato mientras anota otra cosa.
+function scrollFeedToBottom(){
+  const feedEl = document.querySelector(".live-feed-col");
+  if(feedEl) feedEl.scrollTop = feedEl.scrollHeight;
+}
+
 function handleLiveAction(match, type){
   if(type === "cambio"){
     if(liveCambioQueue.length >= 6){ alert("Ya tienes 6 cambios en la cola, el máximo por tanda. Confirma o cancela antes de añadir más."); return; }
@@ -3108,6 +3117,7 @@ function handleLiveAction(match, type){
   liveSelected = null;
   recomputeStatsFromLive(match);
   renderLive(match); renderStatsTableOnly(match); saveMatch(match);
+  scrollFeedToBottom();
 }
 
 // Igual que handleLiveAction, pero para cualquier estadística personalizada
@@ -3118,6 +3128,7 @@ function handleLiveCustomAction(match, statKey){
   liveSelected = null;
   recomputeStatsFromLive(match);
   renderLive(match); renderStatsTableOnly(match); saveMatch(match);
+  scrollFeedToBottom();
 }
 
 // Estadísticas tipo "portero": un solo toque, sin elegir jugador — se anota sola en
@@ -3131,6 +3142,7 @@ function handleGoalkeeperAction(match, statKey){
   match.live.events.push({ type:"custom", key: statKey, minute: currentLiveMinute(match), second: liveSecondsNow(match), playerId: gk.id });
   recomputeStatsFromLive(match);
   renderLive(match); renderStatsTableOnly(match); saveMatch(match);
+  scrollFeedToBottom();
 }
 
 // Estadísticas de EQUIPO: un solo toque, sin jugador (goles/ocasiones del rival, que no
@@ -3139,6 +3151,7 @@ function handleTeamAction(match, statKey){
   match.live.events.push({ type:"team_stat", key: statKey, minute: currentLiveMinute(match), second: liveSecondsNow(match) });
   recomputeStatsFromLive(match);
   renderLive(match); renderStatsTableOnly(match); saveMatch(match);
+  scrollFeedToBottom();
 }
 
 // Construye las opciones de tipo de estadística para el editor de eventos: los 5 tipos
@@ -3694,6 +3707,7 @@ function renderLive(match){
         liveEditingOpen = false;
         recomputeStatsFromLive(match);
         renderLive(match); renderStatsTableOnly(match); saveMatch(match);
+        scrollFeedToBottom();
       });
       queueBtns.appendChild(confirmAllBtn);
       queuePanel.appendChild(queueBtns);
