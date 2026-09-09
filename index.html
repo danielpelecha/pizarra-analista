@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-9">
+<meta name="app-version" content="2026-09-06-10">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -423,6 +423,20 @@
     margin:2px 0 0 42px; padding:0 4px;
   }
   .note-editor{ width:100%; margin-top:4px; }
+  .live-feed-filter{ display:flex; gap:5px; margin:8px 0 4px; }
+  .live-feed-filter-btn{
+    flex:1; background:#fff; border:1px solid var(--border); color:var(--navy);
+    border-radius:6px; padding:5px; font-size:11px; font-weight:bold; cursor:pointer;
+  }
+  .live-feed-filter-btn.active{ background:var(--navy); color:#fff; border-color:var(--navy); }
+  .live-feed-count{ font-size:11px; color:var(--grey); text-align:center; margin:6px 0 0; }
+  .sub-editor{ width:100%; margin-top:4px; }
+  .sub-editor-row{ display:flex; align-items:flex-end; gap:6px; }
+  .sub-editor-col{ flex:1; }
+  .sub-editor-label{ font-size:11px; font-weight:bold; margin:0 0 3px; }
+  .sub-editor-label.out{ color:var(--danger); }
+  .sub-editor-label.in{ color:var(--success); }
+  .sub-editor-arrow{ font-size:16px; color:var(--grey); padding-bottom:8px; }
   .note-editor-textarea{
     width:100%; min-height:52px; border:1px solid var(--border); border-radius:6px;
     padding:6px 8px; font-size:13px; font-family:inherit; resize:vertical; box-sizing:border-box;
@@ -2239,6 +2253,7 @@ let liveCambioOut = null;
 // está escribiendo) — solo actualiza los datos en silencio, y se ve al cerrar el editor.
 let liveEditingOpen = false;
 let liveTickerInterval = null;
+let liveFeedFilter = "todo"; // "todo" | "1" | "2" — filtro del registro del partido por parte
 let matchRealtimeChannel = null;    // suscripción en vivo al partido abierto (para ver cambios de otro dispositivo)
 
 // ---------------- Sincronización en tiempo real entre dispositivos ----------------
@@ -3120,6 +3135,98 @@ function buildStatTypeOptions(){
 // IMPORTANTE: no se toca el contenido de la fila del evento (row) — el editor se añade
 // como un bloque aparte debajo, para que el jugador/estadística siga siempre visible
 // mientras se escribe, sin taparlo ni obligar a recordarlo de memoria.
+// Reconstruye quién estaba en el campo justo antes del evento en la posición "idx",
+// repasando desde el once inicial todos los cambios de jugador anteriores en orden real
+// (el orden en que se guardaron, no el minuto mostrado — así no hay ambigüedad si dos
+// cambios comparten minuto).
+function computeOnPitchBeforeIndex(match, idx){
+  const onPitch = new Set(match.live.startersIds || []);
+  for(let i=0; i<idx; i++){
+    const e = match.live.events[i];
+    if(e.type === "cambio"){
+      onPitch.delete(e.outId);
+      onPitch.add(e.inId);
+    }
+  }
+  return onPitch;
+}
+
+// Editor en línea específico para corregir una sustitución: dos desplegables ("Sale" /
+// "Entra"), cada uno ya filtrado automáticamente — "Sale" solo con quien estaba realmente
+// en el campo en ese momento, "Entra" solo con quien estaba en el banquillo.
+function openSubEditor(match, ev, idx, rowWrap){
+  liveEditingOpen = true;
+  const existingNote = rowWrap.querySelector(".live-feed-note");
+  if(existingNote) existingNote.style.display = "none";
+  const row = rowWrap.querySelector(".live-feed-row");
+  row.innerHTML = "";
+
+  const onPitchSet = computeOnPitchBeforeIndex(match, idx);
+  onPitchSet.add(ev.outId); // por si acaso, que el jugador que salía siempre esté en su lista
+  const pitchList = players.filter(p=> onPitchSet.has(p.id));
+  const benchList = players.filter(p=> !onPitchSet.has(p.id) || p.id === ev.inId);
+
+  const wrap = document.createElement("div");
+  wrap.className = "sub-editor";
+
+  const selRow = document.createElement("div");
+  selRow.className = "sub-editor-row";
+
+  function buildCol(labelText, cls, list, selectedId){
+    const col = document.createElement("div");
+    col.className = "sub-editor-col";
+    const lbl = document.createElement("p");
+    lbl.className = "sub-editor-label " + cls;
+    lbl.textContent = labelText;
+    col.appendChild(lbl);
+    const sel = document.createElement("select");
+    sel.className = "event-editor-select";
+    list.forEach(p=>{
+      const opt = document.createElement("option");
+      opt.value = p.id; opt.textContent = (p.num ? p.num + " " : "") + displayAlias(p);
+      if(p.id === selectedId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    col.appendChild(sel);
+    return { col, sel };
+  }
+  const outField = buildCol("Sale", "out", pitchList, ev.outId);
+  const inField = buildCol("Entra", "in", benchList, ev.inId);
+  selRow.appendChild(outField.col);
+  const arrow = document.createElement("span");
+  arrow.className = "sub-editor-arrow";
+  arrow.textContent = "→";
+  selRow.appendChild(arrow);
+  selRow.appendChild(inField.col);
+  wrap.appendChild(selRow);
+
+  const btnRow = document.createElement("div");
+  btnRow.className = "note-editor-btns";
+  btnRow.appendChild(document.createElement("span"));
+  const rightBtns = document.createElement("div");
+  rightBtns.style.cssText = "display:flex; gap:6px;";
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "small-edit-cancel";
+  cancelBtn.textContent = "✖ Cancelar";
+  cancelBtn.addEventListener("click", ()=>{ liveEditingOpen = false; renderLive(match); });
+  rightBtns.appendChild(cancelBtn);
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "small-edit-save";
+  saveBtn.textContent = "💾 Guardar";
+  saveBtn.addEventListener("click", ()=>{
+    ev.outId = outField.sel.value;
+    ev.inId = inField.sel.value;
+    liveEditingOpen = false;
+    recomputeStatsFromLive(match);
+    renderLive(match); renderStatsTableOnly(match); saveMatch(match);
+  });
+  rightBtns.appendChild(saveBtn);
+  btnRow.appendChild(rightBtns);
+  wrap.appendChild(btnRow);
+
+  row.appendChild(wrap);
+}
+
 function openEventNoteEditor(match, ev, rowWrap){
   liveEditingOpen = true;
   const existingNote = rowWrap.querySelector(".live-feed-note");
@@ -3626,10 +3733,34 @@ function renderLive(match){
   feedLbl.style.cssText = "font-weight:bold;color:var(--navy);margin-top:6px;";
   feedLbl.textContent = "Registro del partido";
   feedWrap.appendChild(feedLbl);
+
+  // Filtro "Todo / 1ª parte / 2ª parte" — solo tiene sentido si ya sabemos dónde está el
+  // corte entre partes; si no (partidos muy antiguos), no se muestra y se ve todo siempre.
+  const filterCutoff = match.live.half2StartSeconds;
+  const filterEventTime = ev=> ev.second !== undefined ? ev.second : ev.minute * 60;
+  if(filterCutoff !== null && filterCutoff !== undefined){
+    const filterRow = document.createElement("div");
+    filterRow.className = "live-feed-filter";
+    [["todo","Todo"], ["1","1ª parte"], ["2","2ª parte"]].forEach(([val, lbl])=>{
+      const btn = document.createElement("button");
+      btn.className = "live-feed-filter-btn" + (liveFeedFilter === val ? " active" : "");
+      btn.textContent = lbl;
+      btn.addEventListener("click", ()=>{ liveFeedFilter = val; renderLive(match); });
+      filterRow.appendChild(btn);
+    });
+    feedWrap.appendChild(filterRow);
+  } else {
+    liveFeedFilter = "todo";
+  }
+
   const feed = document.createElement("div");
   feed.style.marginTop = "6px";
   const labels = { gol:"⚽ Gol", asistencia:"🅰️ Asistencia", ocasion:"🎯 Ocasión", amarilla:"🟨 Amarilla", roja:"🟥 Roja" };
-  const indexed = match.live.events.map((ev, idx)=>({ev, idx})).reverse();
+  let indexed = match.live.events.map((ev, idx)=>({ev, idx})).reverse();
+  const totalCount = indexed.length;
+  if(liveFeedFilter !== "todo" && filterCutoff !== null && filterCutoff !== undefined){
+    indexed = indexed.filter(({ev})=> liveFeedFilter === "1" ? filterEventTime(ev) < filterCutoff : filterEventTime(ev) >= filterCutoff);
+  }
   indexed.forEach(({ev, idx})=>{
     const rowWrap = document.createElement("div");
     rowWrap.className = "live-feed-row-wrap";
@@ -3664,14 +3795,17 @@ function renderLive(match){
       noteBtn.title = ev.note ? "Ver o modificar la nota de este evento" : "Añadir una nota a este evento";
       noteBtn.addEventListener("click", ()=> openEventNoteEditor(match, ev, rowWrap));
       row.appendChild(noteBtn);
-      if(ev.type !== "cambio"){
-        const editBtn = document.createElement("button");
-        editBtn.className = "small-edit";
-        editBtn.textContent = "✏️";
+      const editBtn = document.createElement("button");
+      editBtn.className = "small-edit";
+      editBtn.textContent = "✏️";
+      if(ev.type === "cambio"){
+        editBtn.title = "Corregir quién sale y quién entra";
+        editBtn.addEventListener("click", ()=> openSubEditor(match, ev, idx, rowWrap));
+      } else {
         editBtn.title = "Corregir jugador o tipo de estadística";
         editBtn.addEventListener("click", ()=> openEventEditor(match, ev, idx, row));
-        row.appendChild(editBtn);
       }
+      row.appendChild(editBtn);
       const delBtn = document.createElement("button");
       delBtn.className = "small-del";
       delBtn.textContent = "✕";
@@ -3699,8 +3833,19 @@ function renderLive(match){
     empty.className = "hint";
     empty.textContent = "Todavía no hay eventos registrados.";
     feed.appendChild(empty);
+  } else if(indexed.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "hint";
+    empty.textContent = "Sin eventos en esta parte.";
+    feed.appendChild(empty);
   }
   feedWrap.appendChild(feed);
+  if(filterCutoff !== null && filterCutoff !== undefined && totalCount > 0){
+    const countEl = document.createElement("p");
+    countEl.className = "live-feed-count";
+    countEl.textContent = `Mostrando: ${liveFeedFilter === "todo" ? "todo" : liveFeedFilter === "1" ? "1ª parte" : "2ª parte"} (${indexed.length} de ${totalCount} eventos)`;
+    feedWrap.appendChild(countEl);
+  }
   if(match.live.finished || !liveMainGridRef){
     liveSection.appendChild(feedWrap);
   } else {
@@ -3780,6 +3925,7 @@ function renderMatchDetail(){
   matchFormRow.classList.remove("hidden");
   matchDetailContent.classList.remove("hidden");
   liveEditingOpen = false;
+  liveFeedFilter = "todo";
   ensureStatsForMatch(currentMatch);
   liveSelected = null; liveCambioOut = null;
   ensureLive(currentMatch);
