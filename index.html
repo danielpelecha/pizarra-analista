@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-8">
+<meta name="app-version" content="2026-09-06-9">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -2790,7 +2790,7 @@ function buildMatchReportHTML(match){
       </div>
       <div class="report-compare-sidebar">
         <p class="report-section-title" style="margin-top:0;">📊 Lectura rápida (editable)</p>
-        <textarea id="reportQuickReadBox" class="report-notes-box" style="min-height:60px;" placeholder="Resumen breve para la charla...">${escapeHtml(match.live.reportQuickRead !== undefined ? match.live.reportQuickRead : sugerenciaLectura)}</textarea>
+        <textarea id="reportQuickReadBox" class="report-notes-box" style="min-height:60px; font-size:16px; line-height:2;" placeholder="Resumen breve para la charla...">${escapeHtml(match.live.reportQuickRead !== undefined ? match.live.reportQuickRead : sugerenciaLectura)}</textarea>
         <div id="reportQuickReadPrint" class="report-notes-print"></div>
       </div>
     </div>
