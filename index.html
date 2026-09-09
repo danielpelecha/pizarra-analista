@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-17">
+<meta name="app-version" content="2026-09-06-18">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -2056,6 +2056,18 @@ function getCrestImage(){
   return img;
 }
 
+// En "Medio campo" solo se ve/edita la mitad de ataque (y de 0 a MEDIO_CUTOFF en la escala
+// real del campo completo), estirada para ocupar toda la pantalla. Estas dos funciones son
+// las UNICAS que hacen esa conversion, y las usan por igual el dibujo, la deteccion de toque
+// y el guardado al soltar un arrastre — para que nunca se desincronicen entre si.
+const MEDIO_CUTOFF = 0.55;
+function displayY(realY){
+  return pitchShapeSelect.value === "medio" ? realY / MEDIO_CUTOFF : realY;
+}
+function storedYFromDisplay(displayYVal){
+  return pitchShapeSelect.value === "medio" ? displayYVal * MEDIO_CUTOFF : displayYVal;
+}
+
 function pitchGeom(){
   const W = pitchCanvas.width, H = pitchCanvas.height;
   const MARGIN = 6;
@@ -2173,13 +2185,9 @@ function drawPitch(){
   drawShieldCrest(ctx, W/2, PITCH_TOP-70, 130, 155);
 
   // ---- Jugadores (en medio campo, solo los que caen en la mitad de ataque, y en tamaño mayor) ----
-  const MEDIO_CUTOFF = 0.55;
   starterPositions.forEach((slot, idx)=>{
-    let y = slot.y;
-    if(shape === "medio"){
-      if(y > MEDIO_CUTOFF) return; // se queda fuera del recorte de medio campo (p.ej. portero muy retrasado)
-      y = y / MEDIO_CUTOFF;
-    }
+    if(shape === "medio" && slot.y > MEDIO_CUTOFF) return; // se queda fuera del recorte de medio campo (p.ej. portero muy retrasado)
+    const y = displayY(slot.y);
     const cx = PITCH_LEFT + slot.x*fieldW;
     const cy = PITCH_TOP + y*fieldH;
     const player = players.find(p=> p.id === lineupStarters[idx]);
@@ -2248,10 +2256,12 @@ function canvasPosFromEvent(evt){
 function findNearestStarter(px, py){
   const { PITCH_TOP, PITCH_BOTTOM, PITCH_LEFT, PITCH_RIGHT } = pitchGeom();
   const playH = PITCH_BOTTOM - PITCH_TOP;
+  const isMedio = pitchShapeSelect.value === "medio";
   let best = -1, bestDist = 40; // radio de "agarre" en píxeles del canvas
   starterPositions.forEach((slot, idx)=>{
+    if(isMedio && slot.y > MEDIO_CUTOFF) return; // oculto en este modo, no se puede tocar
     const cx = PITCH_LEFT + slot.x*(PITCH_RIGHT-PITCH_LEFT);
-    const cy = PITCH_TOP + slot.y*playH;
+    const cy = PITCH_TOP + displayY(slot.y)*playH;
     const d = Math.hypot(px-cx, py-cy);
     if(d < bestDist){ bestDist = d; best = idx; }
   });
@@ -2259,7 +2269,6 @@ function findNearestStarter(px, py){
 }
 
 pitchCanvas.addEventListener("pointerdown", (evt)=>{
-  if(pitchShapeSelect.value === "medio") return; // en medio campo las posiciones no se arrastran, solo se ven mas grandes
   const pos = canvasPosFromEvent(evt);
   const idx = findNearestStarter(pos.x, pos.y);
   if(idx >= 0){
@@ -2280,7 +2289,7 @@ pitchCanvas.addEventListener("pointermove", (evt)=>{
   xf = Math.min(0.97, Math.max(0.03, xf));
   yf = Math.min(0.97, Math.max(0.03, yf));
   starterPositions[dragIdx].x = xf;
-  starterPositions[dragIdx].y = yf;
+  starterPositions[dragIdx].y = storedYFromDisplay(yf);
   drawPitch();
   evt.preventDefault();
 });
