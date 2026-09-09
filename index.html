@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-20">
+<meta name="app-version" content="2026-09-06-21">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -1729,6 +1729,23 @@ const pitchColorSelect = document.getElementById("pitchColorSelect");
 pitchShapeSelect.addEventListener("change", drawPitch);
 pitchColorSelect.addEventListener("change", drawPitch);
 
+// Posicion del escudo SOLO en modo Medio campo (en Campo completo el escudo sigue fijo,
+// como hasta ahora). Coordenadas relativas a todo el lienzo (0-1), no solo al campo, porque
+// puede colocarse por encima de las lineas del campo si se quiere.
+let crestPosMedio = { x: 0.09, y: 0.10 };
+let draggingCrest = false;
+// Balon y flechas de movimiento: solo disponibles en Medio campo (ABPs). El balon es un
+// objeto mas que se arrastra igual que el escudo; las lineas se guardan como una lista de
+// segmentos {x1,y1,x2,y2,color,dashed} en coordenadas relativas a todo el lienzo (0-1).
+let ballVisibleMedio = false;
+let ballPosMedio = { x: 0.06, y: 0.06 };
+let draggingBall = false;
+let abpLines = [];
+let abpDrawMode = false;
+let abpDrawColor = "#185fa5";
+let abpDrawDashed = false;
+let abpLineDraft = null; // {x1,y1} en curso mientras se traza una linea nueva
+
 // ---- Barra de herramientas de ABP: balon y lineas de movimiento (solo Medio campo) ----
 const abpDrawTools = document.getElementById("abpDrawTools");
 const abpBallBtn = document.getElementById("abpBallBtn");
@@ -2389,22 +2406,6 @@ function drawPitch(){
 
 // ---------------- Arrastrar jugadores sobre el campo (ratón y dedo) ----------------
 let dragIdx = -1;
-// Posicion del escudo SOLO en modo Medio campo (en Campo completo el escudo sigue fijo,
-// como hasta ahora). Coordenadas relativas a todo el lienzo (0-1), no solo al campo, porque
-// puede colocarse por encima de las lineas del campo si se quiere.
-let crestPosMedio = { x: 0.09, y: 0.10 };
-let draggingCrest = false;
-// Balon y flechas de movimiento: solo disponibles en Medio campo (ABPs). El balon es un
-// objeto mas que se arrastra igual que el escudo; las lineas se guardan como una lista de
-// segmentos {x1,y1,x2,y2,color,dashed} en coordenadas relativas a todo el lienzo (0-1).
-let ballVisibleMedio = false;
-let ballPosMedio = { x: 0.06, y: 0.06 };
-let draggingBall = false;
-let abpLines = [];
-let abpDrawMode = false;
-let abpDrawColor = "#185fa5";
-let abpDrawDashed = false;
-let abpLineDraft = null; // {x1,y1} en curso mientras se traza una linea nueva
 
 function canvasPosFromEvent(evt){
   const rect = pitchCanvas.getBoundingClientRect();
