@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-14">
+<meta name="app-version" content="2026-09-06-15">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -2300,11 +2300,13 @@ function subscribeToMatchRealtime(matchId){
       (payload) => {
         if(!currentMatch || currentMatch.id !== matchId) return;
         const incoming = payload.new;
-        // Si es el eco de una escritura nuestra (aunque no sea la mas reciente que tengamos
-        // en memoria — puede haber dos guardados casi seguidos en vuelo a la vez), no hace
-        // falta re-pintar: los datos ya los teniamos.
-        if(ownRecentWrites.has(incoming.last_modified)){
-          ownRecentWrites.delete(incoming.last_modified);
+        // Postgres devuelve la fecha en un formato de texto distinto al que envia el
+        // navegador (ej. "2026-09-06 11:16:03+00" frente a "2026-09-06T11:16:03Z") — aunque
+        // sea el mismo instante exacto. Por eso se compara como fecha real (epoch), nunca
+        // como texto, o la comparacion de "es un eco de nuestro propio guardado" nunca acertaria.
+        const incomingTs = new Date(incoming.last_modified).getTime();
+        if(ownRecentWrites.has(incomingTs)){
+          ownRecentWrites.delete(incomingTs);
           currentMatch = { ...currentMatch, ...incoming };
           return;
         }
@@ -2934,7 +2936,7 @@ async function saveMatch(match, immediate){
   match.last_modified = new Date().toISOString();
   const doSave = async ()=>{
     const ts = match.last_modified; // se captura aqui, en el instante en que esta escritura concreta arranca
-    ownRecentWrites.add(ts);
+    ownRecentWrites.add(new Date(ts).getTime());
     const { error } = await supabase.from("matches").update({
       date: match.date, rival: match.rival, fase: match.fase, condicion: match.condicion,
       sistema_partido: match.sistema_partido, stats: match.stats, live: match.live,
