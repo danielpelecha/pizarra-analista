@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-10">
+<meta name="app-version" content="2026-09-06-11">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -679,7 +679,7 @@
     resize:vertical; overflow:hidden;
   }
   .report-notes-print{ display:none; }
-  @page{ size: landscape; }
+  @page{ size: A4 landscape; }
   @media print{
     body > *:not(#reportOverlay){ display:none !important; }
     #reportOverlay{ position:static; overflow:visible; }
@@ -3756,7 +3756,7 @@ function renderLive(match){
   const feed = document.createElement("div");
   feed.style.marginTop = "6px";
   const labels = { gol:"⚽ Gol", asistencia:"🅰️ Asistencia", ocasion:"🎯 Ocasión", amarilla:"🟨 Amarilla", roja:"🟥 Roja" };
-  let indexed = match.live.events.map((ev, idx)=>({ev, idx})).reverse();
+  let indexed = match.live.events.map((ev, idx)=>({ev, idx}));
   const totalCount = indexed.length;
   if(liveFeedFilter !== "todo" && filterCutoff !== null && filterCutoff !== undefined){
     indexed = indexed.filter(({ev})=> liveFeedFilter === "1" ? filterEventTime(ev) < filterCutoff : filterEventTime(ev) >= filterCutoff);
