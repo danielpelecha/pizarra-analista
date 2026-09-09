@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-13">
+<meta name="app-version" content="2026-09-06-14">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -2279,6 +2279,12 @@ let liveCambioQueue = []; // cambios ya preparados en esta tanda: [{outId, inId}
 // está escribiendo) — solo actualiza los datos en silencio, y se ve al cerrar el editor.
 let liveEditingOpen = false;
 let liveTickerInterval = null;
+// Guarda las marcas de tiempo (last_modified) de nuestros propios guardados que aun no
+// hemos visto confirmados por el tiempo real. Con dos guardados casi seguidos (uno al
+// anotar, otro del reloj automatico cada 15s), la comparacion simple "es igual al ultimo
+// valor local" fallaba si el mas reciente ya habia sobrescrito el anterior en memoria
+// antes de que llegara el eco del primero — repintando la pantalla sin querer.
+let ownRecentWrites = new Set();
 let liveFeedFilter = "todo"; // "todo" | "1" | "2" — filtro del registro del partido por parte
 let matchRealtimeChannel = null;    // suscripción en vivo al partido abierto (para ver cambios de otro dispositivo)
 
@@ -2294,8 +2300,14 @@ function subscribeToMatchRealtime(matchId){
       (payload) => {
         if(!currentMatch || currentMatch.id !== matchId) return;
         const incoming = payload.new;
-        // Si el cambio lo hemos hecho nosotros mismos hace un instante, no hace falta re-pintar.
-        if(incoming.last_modified === currentMatch.last_modified) return;
+        // Si es el eco de una escritura nuestra (aunque no sea la mas reciente que tengamos
+        // en memoria — puede haber dos guardados casi seguidos en vuelo a la vez), no hace
+        // falta re-pintar: los datos ya los teniamos.
+        if(ownRecentWrites.has(incoming.last_modified)){
+          ownRecentWrites.delete(incoming.last_modified);
+          currentMatch = { ...currentMatch, ...incoming };
+          return;
+        }
         currentMatch = { ...currentMatch, ...incoming };
         if(liveEditingOpen) return; // hay una nota o edición abierta: no repintar ahora, se verá al cerrarla
         liveSelected = null; liveCambioOut = null;
@@ -2921,10 +2933,12 @@ let saveMatchTimer = null;
 async function saveMatch(match, immediate){
   match.last_modified = new Date().toISOString();
   const doSave = async ()=>{
+    const ts = match.last_modified; // se captura aqui, en el instante en que esta escritura concreta arranca
+    ownRecentWrites.add(ts);
     const { error } = await supabase.from("matches").update({
       date: match.date, rival: match.rival, fase: match.fase, condicion: match.condicion,
       sistema_partido: match.sistema_partido, stats: match.stats, live: match.live,
-      last_modified: match.last_modified,
+      last_modified: ts,
     }).eq("id", match.id);
     if(error){ showMsg(matchMsg, "No se ha podido guardar: " + error.message, "error"); }
     const idx = matchesList.findIndex(m=> m.id === match.id);
