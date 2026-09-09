@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-22">
+<meta name="app-version" content="2026-09-06-23">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -1745,6 +1745,7 @@ let abpDrawMode = false;
 let abpDrawColor = "#185fa5";
 let abpDrawDashed = false;
 let abpLineDraft = null; // {x1,y1} en curso mientras se traza una linea nueva
+let curvingLineIdx = -1; // indice de la linea que se esta curvando arrastrando sobre su trazo
 
 // ---- Barra de herramientas de ABP: balon y lineas de movimiento (solo Medio campo) ----
 const abpDrawTools = document.getElementById("abpDrawTools");
@@ -2366,15 +2367,19 @@ function drawPitch(){
 
   // ---- Líneas de movimiento y balón: solo en Medio campo (ABPs) ----
   if(shape === "medio"){
-    function drawArrowLine(x1,y1,x2,y2,color,dashed){
+    function drawArrowLine(x1,y1,x2,y2,color,dashed,cx,cy){
+      if(cx===undefined) cx = (x1+x2)/2;
+      if(cy===undefined) cy = (y1+y2)/2;
       ctx.save();
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
       ctx.lineWidth = 4;
       ctx.setLineDash(dashed ? [10,8] : []);
-      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.quadraticCurveTo(cx,cy,x2,y2); ctx.stroke();
       ctx.setLineDash([]);
-      const angle = Math.atan2(y2-y1, x2-x1);
+      // La punta de flecha sigue la tangente de la curva en el extremo (desde el punto de
+      // control hasta el final), no la recta entre inicio y fin, para que apunte bien aunque este curvada.
+      const angle = Math.atan2(y2-cy, x2-cx);
       const headLen = 16;
       ctx.beginPath();
       ctx.moveTo(x2, y2);
@@ -2385,9 +2390,11 @@ function drawPitch(){
       ctx.restore();
     }
     abpLines.forEach(ln=>{
-      drawArrowLine(ln.x1*W, ln.y1*H, ln.x2*W, ln.y2*H, ln.color, ln.dashed);
+      const cx = ln.cx!==undefined ? ln.cx : (ln.x1+ln.x2)/2, cy = ln.cy!==undefined ? ln.cy : (ln.y1+ln.y2)/2;
+      drawArrowLine(ln.x1*W, ln.y1*H, ln.x2*W, ln.y2*H, ln.color, ln.dashed, cx*W, cy*H);
       if(!abpDrawMode){
-        const mx = (ln.x1+ln.x2)/2*W, my = (ln.y1+ln.y2)/2*H;
+        // Marca de borrado sobre el punto medio real de la curva (t=0.5), no la recta.
+        const mx = (0.25*ln.x1 + 0.5*cx + 0.25*ln.x2)*W, my = (0.25*ln.y1 + 0.5*cy + 0.25*ln.y2)*H;
         ctx.beginPath(); ctx.arc(mx, my, 11, 0, Math.PI*2);
         ctx.fillStyle = "#ffffff"; ctx.fill();
         ctx.lineWidth = 1.5; ctx.strokeStyle = "#c0392b"; ctx.stroke();
@@ -2441,6 +2448,22 @@ function findNearestStarter(px, py){
   return best;
 }
 
+// Distancia minima de un punto a una curva cuadratica, muestreando puntos a lo largo del
+// trazo — permite detectar si se ha tocado "sobre la linea" en cualquier parte de su recorrido,
+// no solo en un punto fijo, para poder curvarla arrastrando desde donde se prefiera.
+function distToQuadCurve(px, py, x1,y1,cx,cy,x2,y2, samples){
+  samples = samples || 24;
+  let minD = Infinity;
+  for(let i=0; i<=samples; i++){
+    const t = i/samples, mt = 1-t;
+    const x = mt*mt*x1 + 2*mt*t*cx + t*t*x2;
+    const y = mt*mt*y1 + 2*mt*t*cy + t*t*y2;
+    const d = Math.hypot(px-x, py-y);
+    if(d < minD) minD = d;
+  }
+  return minD;
+}
+
 pitchCanvas.addEventListener("pointerdown", (evt)=>{
   const pos = canvasPosFromEvent(evt);
   if(pitchShapeSelect.value === "medio" && abpDrawMode){
@@ -2460,10 +2483,31 @@ pitchCanvas.addEventListener("pointerdown", (evt)=>{
     // Tocar la marca ✕ del punto medio de una linea la borra (solo si no se esta dibujando).
     for(let i=abpLines.length-1; i>=0; i--){
       const ln = abpLines[i];
-      const mx = (ln.x1+ln.x2)/2*pitchCanvas.width, my = (ln.y1+ln.y2)/2*pitchCanvas.height;
+      const cx = ln.cx!==undefined ? ln.cx : (ln.x1+ln.x2)/2, cy = ln.cy!==undefined ? ln.cy : (ln.y1+ln.y2)/2;
+      const mx = (0.25*ln.x1+0.5*cx+0.25*ln.x2)*pitchCanvas.width, my = (0.25*ln.y1+0.5*cy+0.25*ln.y2)*pitchCanvas.height;
       if(Math.hypot(pos.x-mx, pos.y-my) < 16){
         abpLines.splice(i, 1);
         drawPitch();
+        evt.preventDefault();
+        return;
+      }
+    }
+
+    // Tocar en cualquier punto del trazo de una linea (no solo el medio) permite arrastrarla
+    // y curvarla en la direccion que se quiera.
+    for(let i=abpLines.length-1; i>=0; i--){
+      const ln = abpLines[i];
+      const cx = ln.cx!==undefined ? ln.cx : (ln.x1+ln.x2)/2, cy = ln.cy!==undefined ? ln.cy : (ln.y1+ln.y2)/2;
+      const d = distToQuadCurve(
+        pos.x, pos.y,
+        ln.x1*pitchCanvas.width, ln.y1*pitchCanvas.height,
+        cx*pitchCanvas.width, cy*pitchCanvas.height,
+        ln.x2*pitchCanvas.width, ln.y2*pitchCanvas.height
+      );
+      if(d < 18){
+        curvingLineIdx = i;
+        pitchCanvas.setPointerCapture(evt.pointerId);
+        pitchCanvas.style.cursor = "grabbing";
         evt.preventDefault();
         return;
       }
@@ -2522,6 +2566,14 @@ pitchCanvas.addEventListener("pointermove", (evt)=>{
     evt.preventDefault();
     return;
   }
+  if(curvingLineIdx >= 0){
+    const pos = canvasPosFromEvent(evt);
+    abpLines[curvingLineIdx].cx = pos.x / pitchCanvas.width;
+    abpLines[curvingLineIdx].cy = pos.y / pitchCanvas.height;
+    drawPitch();
+    evt.preventDefault();
+    return;
+  }
   if(dragIdx < 0) return;
   const { PITCH_TOP, PITCH_BOTTOM, PITCH_LEFT, PITCH_RIGHT } = pitchGeom();
   const pos = canvasPosFromEvent(evt);
@@ -2541,7 +2593,11 @@ function endDrag(evt){
     // Solo se guarda si el trazo tiene un largo minimo, para no crear puntos sueltos con un simple toque.
     const dx = (abpLineDraft.x2-abpLineDraft.x1)*pitchCanvas.width, dy = (abpLineDraft.y2-abpLineDraft.y1)*pitchCanvas.height;
     if(Math.hypot(dx,dy) > 15){
-      abpLines.push({ x1:abpLineDraft.x1, y1:abpLineDraft.y1, x2:abpLineDraft.x2, y2:abpLineDraft.y2, color:abpDrawColor, dashed:abpDrawDashed });
+      abpLines.push({
+        x1:abpLineDraft.x1, y1:abpLineDraft.y1, x2:abpLineDraft.x2, y2:abpLineDraft.y2,
+        cx:(abpLineDraft.x1+abpLineDraft.x2)/2, cy:(abpLineDraft.y1+abpLineDraft.y2)/2,
+        color:abpDrawColor, dashed:abpDrawDashed,
+      });
     }
     abpLineDraft = null;
     drawPitch();
@@ -2556,6 +2612,12 @@ function endDrag(evt){
   }
   if(draggingBall){
     draggingBall = false;
+    pitchCanvas.style.cursor = "grab";
+    if(evt && evt.pointerId !== undefined){ try{ pitchCanvas.releasePointerCapture(evt.pointerId); }catch(e){} }
+    return;
+  }
+  if(curvingLineIdx >= 0){
+    curvingLineIdx = -1;
     pitchCanvas.style.cursor = "grab";
     if(evt && evt.pointerId !== undefined){ try{ pitchCanvas.releasePointerCapture(evt.pointerId); }catch(e){} }
     return;
