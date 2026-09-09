@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-19">
+<meta name="app-version" content="2026-09-06-20">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -267,6 +267,21 @@
   }
   .lineup-controls{ flex:1 1 320px; max-width:380px; }
   .lineup-pitch-col{ flex:1 1 380px; text-align:center; }
+  .abp-draw-tools{
+    display:flex; flex-wrap:wrap; gap:6px; align-items:center; justify-content:center;
+    margin-bottom:10px; padding:8px; background:var(--lightblue); border-radius:8px;
+  }
+  .abp-tool-btn{
+    background:#fff; border:1px solid var(--border); border-radius:6px;
+    padding:6px 10px; font-size:12px; font-weight:bold; color:var(--navy); cursor:pointer;
+  }
+  .abp-tool-btn.active{ background:var(--navy); color:#fff; border-color:var(--navy); }
+  .abp-tool-btn.danger{ background:var(--danger); color:#fff; border-color:var(--danger); }
+  .abp-color-swatch{
+    width:24px; height:24px; border-radius:50%; cursor:pointer; border:2px solid transparent;
+    display:inline-block;
+  }
+  .abp-color-swatch.active{ border-color:var(--navy); box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--navy); }
   #pitchCanvas{
     width:100%;
     max-width:720px;
@@ -1009,6 +1024,16 @@
           </div>
 
           <div class="lineup-pitch-col">
+            <div id="abpDrawTools" class="abp-draw-tools hidden">
+              <button class="abp-tool-btn" id="abpBallBtn">⚽ Balón</button>
+              <button class="abp-tool-btn" id="abpDrawBtn">✏️ Dibujar línea</button>
+              <span class="abp-color-swatch" data-color="#185fa5" style="background:#185fa5;" title="Azul"></span>
+              <span class="abp-color-swatch" data-color="#c0392b" style="background:#c0392b;" title="Rojo"></span>
+              <span class="abp-color-swatch" data-color="#e6a817" style="background:#e6a817;" title="Amarillo"></span>
+              <span class="abp-color-swatch" data-color="#0a0a0a" style="background:#0a0a0a;" title="Negro"></span>
+              <button class="abp-tool-btn" id="abpDashBtn">┄ Discontinua</button>
+              <button class="abp-tool-btn danger" id="abpClearLinesBtn">🗑 Borrar líneas</button>
+            </div>
             <canvas id="pitchCanvas" width="900" height="1273"></canvas>
             <div>
               <button class="btn download-btn-lineup" id="downloadLineupBtn" style="width:auto; margin-top:16px;">⬇️ Descargar alineación (PNG)</button>
@@ -1703,6 +1728,53 @@ const pitchShapeSelect = document.getElementById("pitchShapeSelect");
 const pitchColorSelect = document.getElementById("pitchColorSelect");
 pitchShapeSelect.addEventListener("change", drawPitch);
 pitchColorSelect.addEventListener("change", drawPitch);
+
+// ---- Barra de herramientas de ABP: balon y lineas de movimiento (solo Medio campo) ----
+const abpDrawTools = document.getElementById("abpDrawTools");
+const abpBallBtn = document.getElementById("abpBallBtn");
+const abpDrawBtn = document.getElementById("abpDrawBtn");
+const abpDashBtn = document.getElementById("abpDashBtn");
+const abpClearLinesBtn = document.getElementById("abpClearLinesBtn");
+
+function refreshAbpToolsVisibility(){
+  abpDrawTools.classList.toggle("hidden", pitchShapeSelect.value !== "medio");
+}
+pitchShapeSelect.addEventListener("change", refreshAbpToolsVisibility);
+refreshAbpToolsVisibility();
+
+abpBallBtn.addEventListener("click", ()=>{
+  ballVisibleMedio = !ballVisibleMedio;
+  abpBallBtn.classList.toggle("active", ballVisibleMedio);
+  drawPitch();
+});
+
+abpDrawBtn.addEventListener("click", ()=>{
+  abpDrawMode = !abpDrawMode;
+  abpDrawBtn.classList.toggle("active", abpDrawMode);
+  abpLineDraft = null;
+});
+
+document.querySelectorAll(".abp-color-swatch").forEach(sw=>{
+  if(sw.dataset.color === abpDrawColor) sw.classList.add("active");
+  sw.addEventListener("click", ()=>{
+    abpDrawColor = sw.dataset.color;
+    document.querySelectorAll(".abp-color-swatch").forEach(s=> s.classList.toggle("active", s===sw));
+  });
+});
+
+abpDashBtn.addEventListener("click", ()=>{
+  abpDrawDashed = !abpDrawDashed;
+  abpDashBtn.classList.toggle("active", abpDrawDashed);
+  abpDashBtn.textContent = abpDrawDashed ? "— Continua" : "┄ Discontinua";
+});
+
+abpClearLinesBtn.addEventListener("click", ()=>{
+  if(abpLines.length === 0) return;
+  if(confirm("¿Borrar todas las líneas dibujadas en esta ABP?")){
+    abpLines = [];
+    drawPitch();
+  }
+});
 const optgroupSistemas = document.getElementById("optgroupSistemas");
 const optgroupABP = document.getElementById("optgroupABP");
 Object.keys(FORMATIONS).forEach(k=>{
@@ -1901,6 +1973,12 @@ formationSelect.addEventListener("change", ()=>{
   // (y las posiciones arrastradas a mano se reinician a la disposición elegida).
   resetStarterPositionsFromFormation();
   renderLineupSelects();
+  // Las lineas de movimiento y el balon pertenecen a la jugada concreta, no tiene sentido
+  // conservarlas al cambiar a otra disposicion distinta.
+  abpLines = [];
+  abpLineDraft = null;
+  ballVisibleMedio = false;
+  abpBallBtn.classList.remove("active");
   drawPitch();
 });
 
@@ -2268,6 +2346,45 @@ function drawPitch(){
       });
     }
   }
+
+  // ---- Líneas de movimiento y balón: solo en Medio campo (ABPs) ----
+  if(shape === "medio"){
+    function drawArrowLine(x1,y1,x2,y2,color,dashed){
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 4;
+      ctx.setLineDash(dashed ? [10,8] : []);
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+      ctx.setLineDash([]);
+      const angle = Math.atan2(y2-y1, x2-x1);
+      const headLen = 16;
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - headLen*Math.cos(angle-Math.PI/6), y2 - headLen*Math.sin(angle-Math.PI/6));
+      ctx.lineTo(x2 - headLen*Math.cos(angle+Math.PI/6), y2 - headLen*Math.sin(angle+Math.PI/6));
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    abpLines.forEach(ln=>{
+      drawArrowLine(ln.x1*W, ln.y1*H, ln.x2*W, ln.y2*H, ln.color, ln.dashed);
+    });
+    if(abpLineDraft){
+      drawArrowLine(abpLineDraft.x1*W, abpLineDraft.y1*H, abpLineDraft.x2*W, abpLineDraft.y2*H, abpDrawColor, abpDrawDashed);
+    }
+    if(ballVisibleMedio){
+      const bx = ballPosMedio.x*W, by = ballPosMedio.y*H, br = fieldW*0.022;
+      ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI*2);
+      ctx.fillStyle = "#ffffff"; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = "#0d1b3e"; ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(bx, by-br*0.7); ctx.lineTo(bx+br*0.6, by-br*0.15);
+      ctx.lineTo(bx+br*0.35, by+br*0.65); ctx.lineTo(bx-br*0.35, by+br*0.65);
+      ctx.lineTo(bx-br*0.6, by-br*0.15); ctx.closePath();
+      ctx.fillStyle = "#0d1b3e"; ctx.fill();
+    }
+  }
 }
 
 // ---------------- Arrastrar jugadores sobre el campo (ratón y dedo) ----------------
@@ -2277,6 +2394,17 @@ let dragIdx = -1;
 // puede colocarse por encima de las lineas del campo si se quiere.
 let crestPosMedio = { x: 0.09, y: 0.10 };
 let draggingCrest = false;
+// Balon y flechas de movimiento: solo disponibles en Medio campo (ABPs). El balon es un
+// objeto mas que se arrastra igual que el escudo; las lineas se guardan como una lista de
+// segmentos {x1,y1,x2,y2,color,dashed} en coordenadas relativas a todo el lienzo (0-1).
+let ballVisibleMedio = false;
+let ballPosMedio = { x: 0.06, y: 0.06 };
+let draggingBall = false;
+let abpLines = [];
+let abpDrawMode = false;
+let abpDrawColor = "#185fa5";
+let abpDrawDashed = false;
+let abpLineDraft = null; // {x1,y1} en curso mientras se traza una linea nueva
 
 function canvasPosFromEvent(evt){
   const rect = pitchCanvas.getBoundingClientRect();
@@ -2305,17 +2433,36 @@ function findNearestStarter(px, py){
 
 pitchCanvas.addEventListener("pointerdown", (evt)=>{
   const pos = canvasPosFromEvent(evt);
+  if(pitchShapeSelect.value === "medio" && abpDrawMode){
+    abpLineDraft = {
+      x1: pos.x/pitchCanvas.width, y1: pos.y/pitchCanvas.height,
+      x2: pos.x/pitchCanvas.width, y2: pos.y/pitchCanvas.height,
+    };
+    pitchCanvas.setPointerCapture(evt.pointerId);
+    evt.preventDefault();
+    return;
+  }
   if(pitchShapeSelect.value === "medio"){
     const { PITCH_LEFT, PITCH_RIGHT } = pitchGeom();
     const fieldW = PITCH_RIGHT - PITCH_LEFT;
-    const ccx = crestPosMedio.x*pitchCanvas.width, ccy = crestPosMedio.y*pitchCanvas.height;
     const hitR = Math.max(30, fieldW*0.06);
+    const ccx = crestPosMedio.x*pitchCanvas.width, ccy = crestPosMedio.y*pitchCanvas.height;
     if(Math.hypot(pos.x-ccx, pos.y-ccy) < hitR){
       draggingCrest = true;
       pitchCanvas.setPointerCapture(evt.pointerId);
       pitchCanvas.style.cursor = "grabbing";
       evt.preventDefault();
       return;
+    }
+    if(ballVisibleMedio){
+      const bx = ballPosMedio.x*pitchCanvas.width, by = ballPosMedio.y*pitchCanvas.height;
+      if(Math.hypot(pos.x-bx, pos.y-by) < hitR){
+        draggingBall = true;
+        pitchCanvas.setPointerCapture(evt.pointerId);
+        pitchCanvas.style.cursor = "grabbing";
+        evt.preventDefault();
+        return;
+      }
     }
   }
   const idx = findNearestStarter(pos.x, pos.y);
@@ -2328,10 +2475,26 @@ pitchCanvas.addEventListener("pointerdown", (evt)=>{
 });
 
 pitchCanvas.addEventListener("pointermove", (evt)=>{
+  if(abpLineDraft){
+    const pos = canvasPosFromEvent(evt);
+    abpLineDraft.x2 = pos.x/pitchCanvas.width;
+    abpLineDraft.y2 = pos.y/pitchCanvas.height;
+    drawPitch();
+    evt.preventDefault();
+    return;
+  }
   if(draggingCrest){
     const pos = canvasPosFromEvent(evt);
     crestPosMedio.x = Math.min(0.97, Math.max(0.03, pos.x / pitchCanvas.width));
     crestPosMedio.y = Math.min(0.97, Math.max(0.03, pos.y / pitchCanvas.height));
+    drawPitch();
+    evt.preventDefault();
+    return;
+  }
+  if(draggingBall){
+    const pos = canvasPosFromEvent(evt);
+    ballPosMedio.x = Math.min(0.97, Math.max(0.03, pos.x / pitchCanvas.width));
+    ballPosMedio.y = Math.min(0.97, Math.max(0.03, pos.y / pitchCanvas.height));
     drawPitch();
     evt.preventDefault();
     return;
@@ -2351,8 +2514,25 @@ pitchCanvas.addEventListener("pointermove", (evt)=>{
 });
 
 function endDrag(evt){
+  if(abpLineDraft){
+    // Solo se guarda si el trazo tiene un largo minimo, para no crear puntos sueltos con un simple toque.
+    const dx = (abpLineDraft.x2-abpLineDraft.x1)*pitchCanvas.width, dy = (abpLineDraft.y2-abpLineDraft.y1)*pitchCanvas.height;
+    if(Math.hypot(dx,dy) > 15){
+      abpLines.push({ x1:abpLineDraft.x1, y1:abpLineDraft.y1, x2:abpLineDraft.x2, y2:abpLineDraft.y2, color:abpDrawColor, dashed:abpDrawDashed });
+    }
+    abpLineDraft = null;
+    drawPitch();
+    if(evt && evt.pointerId !== undefined){ try{ pitchCanvas.releasePointerCapture(evt.pointerId); }catch(e){} }
+    return;
+  }
   if(draggingCrest){
     draggingCrest = false;
+    pitchCanvas.style.cursor = "grab";
+    if(evt && evt.pointerId !== undefined){ try{ pitchCanvas.releasePointerCapture(evt.pointerId); }catch(e){} }
+    return;
+  }
+  if(draggingBall){
+    draggingBall = false;
     pitchCanvas.style.cursor = "grab";
     if(evt && evt.pointerId !== undefined){ try{ pitchCanvas.releasePointerCapture(evt.pointerId); }catch(e){} }
     return;
