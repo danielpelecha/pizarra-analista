@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-15">
+<meta name="app-version" content="2026-09-06-16">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -3114,6 +3114,20 @@ function buildLiveChip(p, match, zone, isSentOff){
 // siempre visible. Se usa SOLO al anotar algo nuevo (estadistica o cambio confirmado),
 // nunca al editar, poner una nota o borrar — para no "secuestrar" la vista si el
 // entrenador está corrigiendo algo de hace rato mientras anota otra cosa.
+// Repinta el registro conservando exactamente la posicion de scroll en la que estaba el
+// entrenador (ni al inicio ni al final: donde estuviera) — para usar en cualquier accion de
+// edicion (nota, tipo/jugador, sustitucion, borrar), a diferencia de anotar una estadistica
+// nueva, que si baja hasta el final a proposito (ver scrollFeedToBottom).
+function renderLivePreservingScroll(match){
+  const feedEl = document.querySelector(".live-feed-col");
+  const savedScroll = feedEl ? feedEl.scrollTop : null;
+  renderLive(match);
+  if(savedScroll !== null){
+    const newFeedEl = document.querySelector(".live-feed-col");
+    if(newFeedEl) newFeedEl.scrollTop = savedScroll;
+  }
+}
+
 function scrollFeedToBottom(){
   const feedEl = document.querySelector(".live-feed-col");
   if(feedEl) feedEl.scrollTop = feedEl.scrollHeight;
@@ -3271,7 +3285,7 @@ function openSubEditor(match, ev, idx, rowWrap){
   const cancelBtn = document.createElement("button");
   cancelBtn.className = "small-edit-cancel";
   cancelBtn.textContent = "✖ Cancelar";
-  cancelBtn.addEventListener("click", ()=>{ liveEditingOpen = false; renderLive(match); });
+  cancelBtn.addEventListener("click", ()=>{ liveEditingOpen = false; renderLivePreservingScroll(match); });
   rightBtns.appendChild(cancelBtn);
   const saveBtn = document.createElement("button");
   saveBtn.className = "small-edit-save";
@@ -3281,7 +3295,7 @@ function openSubEditor(match, ev, idx, rowWrap){
     ev.inId = inField.sel.value;
     liveEditingOpen = false;
     recomputeStatsFromLive(match);
-    renderLive(match); renderStatsTableOnly(match); saveMatch(match);
+    renderLivePreservingScroll(match); renderStatsTableOnly(match); saveMatch(match);
   });
   rightBtns.appendChild(saveBtn);
   btnRow.appendChild(rightBtns);
@@ -3316,7 +3330,7 @@ function openEventNoteEditor(match, ev, rowWrap){
     removeBtn.addEventListener("click", ()=>{
       delete ev.note;
       liveEditingOpen = false;
-      renderLive(match); saveMatch(match);
+      renderLivePreservingScroll(match); saveMatch(match);
     });
     btnRow.appendChild(removeBtn);
   } else {
@@ -3329,7 +3343,7 @@ function openEventNoteEditor(match, ev, rowWrap){
   const cancelBtn = document.createElement("button");
   cancelBtn.className = "small-edit-cancel";
   cancelBtn.textContent = "✖ Cancelar";
-  cancelBtn.addEventListener("click", ()=>{ liveEditingOpen = false; renderLive(match); });
+  cancelBtn.addEventListener("click", ()=>{ liveEditingOpen = false; renderLivePreservingScroll(match); });
   rightBtns.appendChild(cancelBtn);
 
   const saveBtn = document.createElement("button");
@@ -3339,7 +3353,7 @@ function openEventNoteEditor(match, ev, rowWrap){
     const val = textarea.value.trim();
     if(val){ ev.note = val; } else { delete ev.note; }
     liveEditingOpen = false;
-    renderLive(match); saveMatch(match);
+    renderLivePreservingScroll(match); saveMatch(match);
   });
   rightBtns.appendChild(saveBtn);
 
@@ -3405,7 +3419,7 @@ function openEventEditor(match, ev, idx, row){
     else { ev.playerId = playerSel.value; }
     liveEditingOpen = false;
     recomputeStatsFromLive(match);
-    renderLive(match); renderStatsTableOnly(match); saveMatch(match);
+    renderLivePreservingScroll(match); renderStatsTableOnly(match); saveMatch(match);
   });
   wrap.appendChild(saveBtn);
 
@@ -3413,7 +3427,7 @@ function openEventEditor(match, ev, idx, row){
   cancelBtn.className = "small-edit-cancel";
   cancelBtn.textContent = "✖";
   cancelBtn.title = "Cancelar";
-  cancelBtn.addEventListener("click", ()=>{ liveEditingOpen = false; renderLive(match); });
+  cancelBtn.addEventListener("click", ()=>{ liveEditingOpen = false; renderLivePreservingScroll(match); });
   wrap.appendChild(cancelBtn);
 
   row.appendChild(wrap);
@@ -3924,7 +3938,7 @@ function renderLive(match){
         if(confirm(`¿Borrar este evento del registro? (${text}, minuto ${ev.minute}')`)){
           match.live.events.splice(idx, 1);
           recomputeStatsFromLive(match);
-          renderLive(match); renderStatsTableOnly(match); saveMatch(match);
+          renderLivePreservingScroll(match); renderStatsTableOnly(match); saveMatch(match);
         }
       });
       row.appendChild(delBtn);
