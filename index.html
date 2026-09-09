@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-11">
+<meta name="app-version" content="2026-09-06-12">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -534,8 +534,33 @@
     background:#fff; border:3px solid var(--border); border-radius:10px;
     padding:8px 4px; cursor:pointer; font-size:12px; text-align:center;
   }
-  .live-chip.selected{ border-color:var(--blue); background:var(--lightblue); }
+  .live-chip.selected{ border-color:var(--blue); background:var(--lightblue); box-shadow:0 0 0 3px rgba(24,95,165,0.25); }
+  .live-chip.selected .circle{ border:2px solid var(--blue); }
+  .live-chip.selected .circle::after{
+    content:"✓"; position:absolute; top:-4px; right:-4px; background:var(--success);
+    color:#fff; border-radius:50%; width:15px; height:15px; font-size:10px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .live-chip .circle{ position:relative; }
   .live-chip.sentoff{ opacity:0.45; cursor:default; }
+  .live-chip.queued-sub{ opacity:0.4; cursor:default; }
+  .cambio-queue-panel{
+    background:var(--lightblue); border:2px solid var(--blue); border-radius:10px;
+    padding:12px 14px; margin:8px 0 12px;
+  }
+  .cambio-queue-title{ font-size:13px; font-weight:bold; color:var(--navy); margin:0 0 8px; }
+  .cambio-queue-line{
+    display:flex; align-items:center; justify-content:space-between; background:#fff;
+    border-radius:6px; padding:6px 10px; margin-bottom:6px; font-size:13px;
+  }
+  .cambio-queue-line .out{ color:var(--danger); font-weight:bold; }
+  .cambio-queue-line .in{ color:var(--success); font-weight:bold; }
+  .cambio-queue-remove{
+    background:none; border:none; color:var(--grey); font-size:14px; cursor:pointer;
+    padding:0 4px;
+  }
+  .cambio-queue-btns{ display:flex; gap:8px; margin-top:8px; }
+  .cambio-queue-btns button{ flex:1; }
   .live-chip .circle{
     width:34px; height:34px; border-radius:50%; background:var(--blue); color:#fff;
     display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:15px;
@@ -2248,6 +2273,7 @@ let matchesList = [];               // resumen de partidos del club (para la lis
 let currentMatch = null;            // partido abierto actualmente (objeto completo con stats/live)
 let liveSelected = null;
 let liveCambioOut = null;
+let liveCambioQueue = []; // cambios ya preparados en esta tanda: [{outId, inId}], hasta 6
 // Cuando hay un editor en línea abierto (nota o corregir tipo/jugador), la actualización en
 // tiempo real de otro dispositivo NO debe repintar la pantalla entera (borraría lo que se
 // está escribiendo) — solo actualiza los datos en silencio, y se ve al cerrar el editor.
@@ -2523,7 +2549,7 @@ function renderMatchList(){
       const { data, error } = await supabase.from("matches").select("*").eq("id", m.id).single();
       if(error){ showMsg(matchMsg, "No se ha podido abrir el partido: " + error.message, "error"); return; }
       currentMatch = data;
-      liveSelected = null; liveCambioOut = null;
+      liveSelected = null; liveCambioOut = null; liveCambioQueue = [];
       subscribeToMatchRealtime(currentMatch.id);
       renderMatchList();
       renderMatchDetail();
@@ -3040,20 +3066,26 @@ function positionColorClass(pos){
 }
 
 function buildLiveChip(p, match, zone, isSentOff){
+  const queuedOut = liveCambioQueue.some(q=> q.outId === p.id);
+  const queuedIn = liveCambioQueue.some(q=> q.inId === p.id);
   const chip = document.createElement("div");
   let cls = "live-chip";
   if(zone === "on" && liveSelected === p.id) cls += " selected";
   if(isSentOff) cls += " sentoff";
+  if((zone === "on" && queuedOut) || (zone === "bench" && queuedIn)) cls += " queued-sub";
   chip.className = cls;
   chip.innerHTML = `<div class="circle ${positionColorClass(p.pos)}">${escapeHtml(p.num || "?")}</div><div>${escapeHtml(displayAlias(p))}</div>`;
   if(isSentOff){ chip.title = "Expulsado"; return chip; }
+  if((zone === "on" && queuedOut) || (zone === "bench" && queuedIn)){
+    chip.title = "Ya está en la cola de cambios de esta tanda";
+    return chip;
+  }
   chip.addEventListener("click", ()=>{
     if(liveCambioOut){
       if(zone === "bench"){
-        match.live.events.push({ type:"cambio", minute: currentLiveMinute(match), second: liveSecondsNow(match), outId: liveCambioOut, inId: p.id });
+        liveCambioQueue.push({ outId: liveCambioOut, inId: p.id });
         liveCambioOut = null;
-        recomputeStatsFromLive(match);
-        renderLive(match); renderStatsTableOnly(match); saveMatch(match);
+        renderLive(match);
       }
       return;
     }
@@ -3064,8 +3096,10 @@ function buildLiveChip(p, match, zone, isSentOff){
 
 function handleLiveAction(match, type){
   if(type === "cambio"){
+    if(liveCambioQueue.length >= 6){ alert("Ya tienes 6 cambios en la cola, el máximo por tanda. Confirma o cancela antes de añadir más."); return; }
     if(!liveSelected){ alert("Primero toca en 'En el campo' a quién sale."); return; }
     liveCambioOut = liveSelected; liveSelected = null;
+    liveEditingOpen = true;
     renderLive(match);
     return;
   }
@@ -3609,16 +3643,62 @@ function renderLive(match){
     hint.className = "hint";
     hint.textContent = liveCambioOut
       ? "Cambio en marcha: toca ahora quién ENTRA, en el banquillo"
+      : liveCambioQueue.length > 0
+      ? "Toca a otro jugador en 'En el campo' para añadir otro cambio a la cola, o confirma los que ya tienes"
       : "Toca a un jugador en 'En el campo' y después la acción, o pulsa 'Cambio' para una sustitución";
     hintRow.appendChild(hint);
     if(liveCambioOut){
       const cancelBtn = document.createElement("button");
       cancelBtn.className = "live-btn grey";
       cancelBtn.textContent = "✕ Cancelar cambio";
-      cancelBtn.addEventListener("click", ()=>{ liveCambioOut = null; renderLive(match); });
+      cancelBtn.addEventListener("click", ()=>{ liveCambioOut = null; liveEditingOpen = liveCambioQueue.length > 0; renderLive(match); });
       hintRow.appendChild(cancelBtn);
     }
     liveSection.appendChild(hintRow);
+
+    if(liveCambioQueue.length > 0){
+      const queuePanel = document.createElement("div");
+      queuePanel.className = "cambio-queue-panel";
+      const queueTitle = document.createElement("p");
+      queueTitle.className = "cambio-queue-title";
+      queueTitle.textContent = `🔄 Cambios en cola (${liveCambioQueue.length} de 6)`;
+      queuePanel.appendChild(queueTitle);
+      liveCambioQueue.forEach((q, qi)=>{
+        const pOut = players.find(p=>p.id===q.outId), pIn = players.find(p=>p.id===q.inId);
+        const line = document.createElement("div");
+        line.className = "cambio-queue-line";
+        line.innerHTML = `<span><span class="out">${escapeHtml(pOut?displayAlias(pOut):"?")}</span> → <span class="in">${escapeHtml(pIn?displayAlias(pIn):"?")}</span></span>`;
+        const rm = document.createElement("button");
+        rm.className = "cambio-queue-remove";
+        rm.textContent = "✕";
+        rm.title = "Quitar este cambio de la cola";
+        rm.addEventListener("click", ()=>{ liveCambioQueue.splice(qi, 1); liveEditingOpen = liveCambioQueue.length > 0; renderLive(match); });
+        line.appendChild(rm);
+        queuePanel.appendChild(line);
+      });
+      const queueBtns = document.createElement("div");
+      queueBtns.className = "cambio-queue-btns";
+      const cancelAllBtn = document.createElement("button");
+      cancelAllBtn.className = "small-edit-cancel";
+      cancelAllBtn.textContent = "✖ Cancelar todo";
+      cancelAllBtn.addEventListener("click", ()=>{ liveCambioQueue = []; liveEditingOpen = false; renderLive(match); });
+      queueBtns.appendChild(cancelAllBtn);
+      const confirmAllBtn = document.createElement("button");
+      confirmAllBtn.className = "small-edit-save";
+      confirmAllBtn.textContent = `💾 Confirmar ${liveCambioQueue.length} cambio${liveCambioQueue.length===1?"":"s"}`;
+      confirmAllBtn.addEventListener("click", ()=>{
+        liveCambioQueue.forEach(q=>{
+          match.live.events.push({ type:"cambio", minute: currentLiveMinute(match), second: liveSecondsNow(match), outId: q.outId, inId: q.inId });
+        });
+        liveCambioQueue = [];
+        liveEditingOpen = false;
+        recomputeStatsFromLive(match);
+        renderLive(match); renderStatsTableOnly(match); saveMatch(match);
+      });
+      queueBtns.appendChild(confirmAllBtn);
+      queuePanel.appendChild(queueBtns);
+      liveSection.appendChild(queuePanel);
+    }
 
     const mainGrid = document.createElement("div");
     mainGrid.className = "live-main-grid";
@@ -3927,7 +4007,7 @@ function renderMatchDetail(){
   liveEditingOpen = false;
   liveFeedFilter = "todo";
   ensureStatsForMatch(currentMatch);
-  liveSelected = null; liveCambioOut = null;
+  liveSelected = null; liveCambioOut = null; liveCambioQueue = [];
   ensureLive(currentMatch);
   renderLive(currentMatch);
   if(currentMatch.live.started && currentMatch.live.running && !currentMatch.live.finished) startLiveTicker();
