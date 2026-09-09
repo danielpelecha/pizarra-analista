@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-21">
+<meta name="app-version" content="2026-09-06-22">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -2386,12 +2386,21 @@ function drawPitch(){
     }
     abpLines.forEach(ln=>{
       drawArrowLine(ln.x1*W, ln.y1*H, ln.x2*W, ln.y2*H, ln.color, ln.dashed);
+      if(!abpDrawMode){
+        const mx = (ln.x1+ln.x2)/2*W, my = (ln.y1+ln.y2)/2*H;
+        ctx.beginPath(); ctx.arc(mx, my, 11, 0, Math.PI*2);
+        ctx.fillStyle = "#ffffff"; ctx.fill();
+        ctx.lineWidth = 1.5; ctx.strokeStyle = "#c0392b"; ctx.stroke();
+        ctx.strokeStyle = "#c0392b"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(mx-5,my-5); ctx.lineTo(mx+5,my+5);
+        ctx.moveTo(mx+5,my-5); ctx.lineTo(mx-5,my+5); ctx.stroke();
+      }
     });
     if(abpLineDraft){
       drawArrowLine(abpLineDraft.x1*W, abpLineDraft.y1*H, abpLineDraft.x2*W, abpLineDraft.y2*H, abpDrawColor, abpDrawDashed);
     }
     if(ballVisibleMedio){
-      const bx = ballPosMedio.x*W, by = ballPosMedio.y*H, br = fieldW*0.022;
+      const bx = ballPosMedio.x*W, by = ballPosMedio.y*H, br = fieldW*0.011;
       ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI*2);
       ctx.fillStyle = "#ffffff"; ctx.fill();
       ctx.lineWidth = 2; ctx.strokeStyle = "#0d1b3e"; ctx.stroke();
@@ -2447,6 +2456,19 @@ pitchCanvas.addEventListener("pointerdown", (evt)=>{
     const { PITCH_LEFT, PITCH_RIGHT } = pitchGeom();
     const fieldW = PITCH_RIGHT - PITCH_LEFT;
     const hitR = Math.max(30, fieldW*0.06);
+
+    // Tocar la marca ✕ del punto medio de una linea la borra (solo si no se esta dibujando).
+    for(let i=abpLines.length-1; i>=0; i--){
+      const ln = abpLines[i];
+      const mx = (ln.x1+ln.x2)/2*pitchCanvas.width, my = (ln.y1+ln.y2)/2*pitchCanvas.height;
+      if(Math.hypot(pos.x-mx, pos.y-my) < 16){
+        abpLines.splice(i, 1);
+        drawPitch();
+        evt.preventDefault();
+        return;
+      }
+    }
+
     const ccx = crestPosMedio.x*pitchCanvas.width, ccy = crestPosMedio.y*pitchCanvas.height;
     if(Math.hypot(pos.x-ccx, pos.y-ccy) < hitR){
       draggingCrest = true;
