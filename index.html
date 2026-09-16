@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-10-1">
+<meta name="app-version" content="2026-09-16-1">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -4739,9 +4739,9 @@ async function loadTrainingDay(dateStr){
 function renderTrainingRecordsList(){
   trainingRecordsListEl.innerHTML = "";
   players.forEach(p=>{
-    const rec = trainingRecordsToday[p.id] || { attendance:"presente", actitud:null };
+    const rec = trainingRecordsToday[p.id] || { attendance:null, actitud:null };
     const row = document.createElement("div");
-    row.className = "training-row" + (rec.attendance !== "presente" ? " absent" : "");
+    row.className = "training-row" + (rec.attendance && rec.attendance !== "presente" ? " absent" : "");
 
     const nameEl = document.createElement("span");
     nameEl.className = "tname";
@@ -4770,10 +4770,15 @@ function renderTrainingRecordsList(){
         actGroup.appendChild(btn);
       });
       row.appendChild(actGroup);
-    } else {
+    } else if(rec.attendance){
       const span = document.createElement("span");
       span.style.cssText = "font-size:10px;color:var(--grey);";
       span.textContent = "— sin actitud (ausente) —";
+      row.appendChild(span);
+    } else {
+      const span = document.createElement("span");
+      span.style.cssText = "font-size:10px;color:var(--grey); font-style:italic;";
+      span.textContent = "Sin marcar todavía";
       row.appendChild(span);
     }
 
