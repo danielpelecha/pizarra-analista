@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-06-23">
+<meta name="app-version" content="2026-09-10-1">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -617,6 +617,38 @@
     background:#fff; border:2px solid var(--border); border-radius:8px;
     padding:8px 10px; margin-bottom:8px; user-select:none;
   }
+  .training-row{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    background:#fff; border:2px solid var(--border); border-radius:8px;
+    padding:8px 10px; margin-bottom:6px;
+  }
+  .training-row.absent{ background:var(--lightblue); opacity:0.85; }
+  .training-row .tname{ font-weight:bold; color:var(--navy); width:90px; flex-shrink:0; }
+  .training-btn-group{ display:flex; gap:4px; }
+  .training-btn{
+    background:#fff; border:1px solid var(--border); border-radius:6px;
+    padding:5px 8px; font-size:11px; font-weight:bold; color:var(--navy); cursor:pointer;
+  }
+  .training-btn.att-presente.active{ background:var(--success); color:#fff; border-color:var(--success); }
+  .training-btn.att-ausente_justificada.active{ background:var(--grey); color:#fff; border-color:var(--grey); }
+  .training-btn.att-ausente_injustificada.active{ background:var(--danger); color:#fff; border-color:var(--danger); }
+  .training-btn.act-mejorable.active{ background:#e67e22; color:#fff; border-color:#e67e22; }
+  .training-btn.act-correcta.active{ background:var(--blue); color:#fff; border-color:var(--blue); }
+  .training-btn.act-excelente.active{ background:var(--success); color:#fff; border-color:var(--success); }
+  .training-plus-btn{
+    background:var(--navy); color:#fff; border:none; border-radius:50%;
+    width:26px; height:26px; font-size:15px; margin-left:auto; cursor:pointer;
+  }
+  .extra-point-line{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--lightblue); border-radius:6px; padding:6px 10px;
+    font-size:12px; color:var(--navy); margin-bottom:5px;
+  }
+  .category-picker-btn{
+    text-align:left; background:var(--surface, #f7f7f5); border:1px solid var(--border);
+    border-radius:6px; padding:8px 10px; font-size:12px; color:var(--navy); cursor:pointer;
+  }
+  .category-picker-btn.negative{ background:#fdeceb; border-color:var(--danger); color:var(--danger); }
   .stat-manager-row.dragging{ opacity:0.4; border-style:dashed; }
   .stat-drag-handle{
     cursor:grab; font-size:18px; color:var(--grey); padding:0 4px; touch-action:none;
@@ -1095,8 +1127,49 @@
       <p class="hint">Próximamente: histórico individual de cada jugador.</p></div>
     </div>
     <div class="tab-panel hidden" id="tabPanelEquipo">
-      <div class="card wide"><h1 style="text-align:left;">Equipo</h1>
-      <p class="hint">Próximamente: estadísticas agregadas del equipo.</p></div>
+      <div class="card wide">
+        <h1 style="text-align:left;">Equipo — Control diario</h1>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+          <div>
+            <label for="trainingDate">Fecha de entrenamiento</label>
+            <input type="date" id="trainingDate">
+          </div>
+          <button class="btn secondary" id="toggleCategoryManagerBtn" style="width:auto; margin-top:22px;">🎨 Organizar categorías de puntos</button>
+        </div>
+
+        <div id="categoryManagerPanel" class="stat-manager hidden">
+          <p class="hint">Añade, edita o quita las categorías de puntos extra que aparecen al pulsar "+". Los puntos pueden ser negativos.</p>
+          <div id="categoryManagerList"></div>
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <input type="text" id="newCategoryLabel" placeholder="Nombre de la categoría nueva" style="flex:2;">
+            <input type="number" id="newCategoryPoints" placeholder="Puntos" value="1" style="flex:1;">
+            <button class="btn" id="addCategoryBtn" style="width:auto; margin-top:0;">+ Añadir</button>
+          </div>
+        </div>
+
+        <h3 style="margin-top:18px;">Jugadores — <span id="trainingDateLabel"></span></h3>
+        <div id="trainingRecordsList"></div>
+        <div id="trainingMsg" class="msg"></div>
+
+        <div id="extraPointsToday" style="margin-top:16px;"></div>
+
+        <h3 style="margin-top:26px;">📊 Resumen semanal — <span id="weekRangeLabel"></span></h3>
+        <p class="hint" id="weekSessionsLabel"></p>
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="weekSummaryTable">
+            <thead><tr><th>Jugador</th><th>Asistencia</th><th>Actitud</th><th>Extra</th><th>Partido</th><th>Total</th></tr></thead>
+            <tbody id="weekSummaryBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="categoryPickerOverlay" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:600; display:flex; align-items:center; justify-content:center;">
+      <div style="background:#fff; border-radius:12px; padding:18px 20px; max-width:340px; width:90%;">
+        <p style="font-weight:bold; color:var(--navy); margin:0 0 10px;" id="categoryPickerTitle">Punto extra</p>
+        <div id="categoryPickerList" style="display:flex; flex-direction:column; gap:6px;"></div>
+        <button class="btn secondary" id="categoryPickerCancelBtn" style="width:100%; margin-top:12px;">✖ Cancelar</button>
+      </div>
     </div>
 
     <div class="powered-by">
@@ -1180,6 +1253,14 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
       ensurePlayersLoadedThen(async ()=>{
         await loadStatColumns();
         await loadMatches();
+      });
+    }
+    if(tab === "equipo"){
+      ensurePlayersLoadedThen(async ()=>{
+        await loadStatColumns();
+        await loadMatches();
+        await loadTrainingCategories();
+        await loadTrainingDay(trainingDateInput.value);
       });
     }
   });
@@ -4548,6 +4629,318 @@ async function afterAuthChange(){
   showScreen(screenApp);
   requestWakeLock();
 }
+
+// ==================================================================
+// EQUIPO: Control diario de entrenamiento (asistencia, actitud, puntos extra)
+// ==================================================================
+let trainingCategories = [];
+let trainingRecordsToday = {}; // playerId -> {attendance, actitud}
+let trainingPointsToday = [];  // filas de training_points del dia seleccionado
+let selectedTrainingDate = new Date().toISOString().slice(0,10);
+
+const trainingDateInput = document.getElementById("trainingDate");
+const trainingDateLabel = document.getElementById("trainingDateLabel");
+const trainingRecordsListEl = document.getElementById("trainingRecordsList");
+const extraPointsTodayEl = document.getElementById("extraPointsToday");
+const trainingMsg = document.getElementById("trainingMsg");
+const weekRangeLabel = document.getElementById("weekRangeLabel");
+const weekSessionsLabel = document.getElementById("weekSessionsLabel");
+const weekSummaryBody = document.getElementById("weekSummaryBody");
+const categoryManagerPanel = document.getElementById("categoryManagerPanel");
+const categoryManagerList = document.getElementById("categoryManagerList");
+const categoryPickerOverlay = document.getElementById("categoryPickerOverlay");
+const categoryPickerList = document.getElementById("categoryPickerList");
+const categoryPickerTitle = document.getElementById("categoryPickerTitle");
+
+trainingDateInput.value = selectedTrainingDate;
+
+function fmtFechaCorta(dstr){
+  const d = new Date(dstr+"T00:00:00");
+  return d.toLocaleDateString("es-ES", { weekday:"long", day:"numeric", month:"long" });
+}
+
+async function loadTrainingCategories(){
+  const { data, error } = await supabase.from("training_categories").select("*").eq("club_id", currentClub.id).order("orden", { ascending:true });
+  if(error){ showMsg(trainingMsg, "No se han podido cargar las categorías: " + error.message, "error"); return; }
+  trainingCategories = data || [];
+}
+
+function renderCategoryManager(){
+  categoryManagerList.innerHTML = "";
+  trainingCategories.forEach(cat=>{
+    const row = document.createElement("div");
+    row.className = "stat-manager-row";
+    const lbl = document.createElement("input");
+    lbl.type = "text"; lbl.value = cat.label; lbl.style.flex = "2";
+    lbl.addEventListener("change", async ()=>{
+      cat.label = lbl.value;
+      await supabase.from("training_categories").update({ label: lbl.value }).eq("id", cat.id);
+    });
+    row.appendChild(lbl);
+    const pts = document.createElement("input");
+    pts.type = "number"; pts.value = cat.points; pts.style.width = "70px";
+    pts.addEventListener("change", async ()=>{
+      cat.points = Number(pts.value) || 0;
+      await supabase.from("training_categories").update({ points: cat.points }).eq("id", cat.id);
+    });
+    row.appendChild(pts);
+    const delBtn = document.createElement("button");
+    delBtn.className = "small-del";
+    delBtn.textContent = "✕";
+    delBtn.title = "Quitar esta categoría (los puntos ya otorgados con ella no se borran)";
+    delBtn.addEventListener("click", async ()=>{
+      if(!confirm(`¿Quitar la categoría "${cat.label}"? Los puntos ya otorgados con ella se conservan igualmente.`)) return;
+      await supabase.from("training_categories").delete().eq("id", cat.id);
+      await loadTrainingCategories();
+      renderCategoryManager();
+    });
+    row.appendChild(delBtn);
+    categoryManagerList.appendChild(row);
+  });
+}
+
+document.getElementById("toggleCategoryManagerBtn").addEventListener("click", ()=>{
+  categoryManagerPanel.classList.toggle("hidden");
+  if(!categoryManagerPanel.classList.contains("hidden")) renderCategoryManager();
+});
+
+document.getElementById("addCategoryBtn").addEventListener("click", async ()=>{
+  const label = document.getElementById("newCategoryLabel").value.trim();
+  const points = Number(document.getElementById("newCategoryPoints").value) || 0;
+  if(!label){ alert("Escribe un nombre para la categoría."); return; }
+  const { error } = await supabase.from("training_categories").insert({
+    club_id: currentClub.id, label, points, orden: trainingCategories.length+1,
+  });
+  if(error){ showMsg(trainingMsg, "No se ha podido añadir: " + error.message, "error"); return; }
+  document.getElementById("newCategoryLabel").value = "";
+  document.getElementById("newCategoryPoints").value = "1";
+  await loadTrainingCategories();
+  renderCategoryManager();
+});
+
+async function loadTrainingDay(dateStr){
+  selectedTrainingDate = dateStr;
+  trainingDateLabel.textContent = fmtFechaCorta(dateStr);
+
+  const { data: records, error: e1 } = await supabase.from("training_records").select("*").eq("club_id", currentClub.id).eq("date", dateStr);
+  if(e1){ showMsg(trainingMsg, "Error al cargar asistencia: " + e1.message, "error"); return; }
+  trainingRecordsToday = {};
+  (records||[]).forEach(r=> trainingRecordsToday[r.player_id] = r);
+
+  const { data: points, error: e2 } = await supabase.from("training_points").select("*").eq("club_id", currentClub.id).eq("date", dateStr).order("created_at", { ascending:true });
+  if(e2){ showMsg(trainingMsg, "Error al cargar puntos: " + e2.message, "error"); return; }
+  trainingPointsToday = points || [];
+
+  renderTrainingRecordsList();
+  renderExtraPointsToday();
+  await renderWeekSummary();
+}
+
+function renderTrainingRecordsList(){
+  trainingRecordsListEl.innerHTML = "";
+  players.forEach(p=>{
+    const rec = trainingRecordsToday[p.id] || { attendance:"presente", actitud:null };
+    const row = document.createElement("div");
+    row.className = "training-row" + (rec.attendance !== "presente" ? " absent" : "");
+
+    const nameEl = document.createElement("span");
+    nameEl.className = "tname";
+    nameEl.textContent = (p.num ? p.num+" " : "") + displayAlias(p);
+    row.appendChild(nameEl);
+
+    const attGroup = document.createElement("div");
+    attGroup.className = "training-btn-group";
+    [["presente","Presente"],["ausente_justificada","Aus. justif."],["ausente_injustificada","Aus. injust."]].forEach(([val,lbl])=>{
+      const btn = document.createElement("button");
+      btn.className = "training-btn att-"+val + (rec.attendance===val ? " active" : "");
+      btn.textContent = lbl;
+      btn.addEventListener("click", ()=> saveTrainingRecord(p.id, val, val==="presente" ? (rec.actitud||null) : null));
+      attGroup.appendChild(btn);
+    });
+    row.appendChild(attGroup);
+
+    if(rec.attendance === "presente"){
+      const actGroup = document.createElement("div");
+      actGroup.className = "training-btn-group";
+      [["mejorable","Mejorable"],["correcta","Correcta"],["excelente","Excelente"]].forEach(([val,lbl])=>{
+        const btn = document.createElement("button");
+        btn.className = "training-btn act-"+val + (rec.actitud===val ? " active" : "");
+        btn.textContent = lbl;
+        btn.addEventListener("click", ()=> saveTrainingRecord(p.id, "presente", val));
+        actGroup.appendChild(btn);
+      });
+      row.appendChild(actGroup);
+    } else {
+      const span = document.createElement("span");
+      span.style.cssText = "font-size:10px;color:var(--grey);";
+      span.textContent = "— sin actitud (ausente) —";
+      row.appendChild(span);
+    }
+
+    const plusBtn = document.createElement("button");
+    plusBtn.className = "training-plus-btn";
+    plusBtn.textContent = "+";
+    plusBtn.title = "Añadir un punto extra puntual";
+    plusBtn.addEventListener("click", ()=> openCategoryPicker(p));
+    row.appendChild(plusBtn);
+
+    trainingRecordsListEl.appendChild(row);
+  });
+}
+
+async function saveTrainingRecord(playerId, attendance, actitud){
+  trainingRecordsToday[playerId] = { ...(trainingRecordsToday[playerId]||{}), attendance, actitud };
+  renderTrainingRecordsList();
+  const { error } = await supabase.from("training_records").upsert({
+    club_id: currentClub.id, date: selectedTrainingDate, player_id: playerId,
+    attendance, actitud, updated_at: new Date().toISOString(),
+  }, { onConflict: "club_id,date,player_id" });
+  if(error){ showMsg(trainingMsg, "No se ha podido guardar: " + error.message, "error"); return; }
+  await renderWeekSummary();
+}
+
+function openCategoryPicker(player){
+  categoryPickerTitle.textContent = "Punto extra — " + displayAlias(player);
+  categoryPickerList.innerHTML = "";
+  if(trainingCategories.length === 0){
+    categoryPickerList.innerHTML = '<p class="hint">No hay categorías creadas todavía. Ve a "🎨 Organizar categorías" para añadir alguna.</p>';
+  }
+  trainingCategories.forEach(cat=>{
+    const btn = document.createElement("button");
+    btn.className = "category-picker-btn" + (cat.points<0 ? " negative" : "");
+    btn.textContent = `${cat.label} · ${cat.points>0?"+":""}${cat.points}`;
+    btn.addEventListener("click", async ()=>{
+      categoryPickerOverlay.classList.add("hidden");
+      const { error } = await supabase.from("training_points").insert({
+        club_id: currentClub.id, date: selectedTrainingDate, player_id: player.id,
+        category_id: cat.id, label: cat.label, points: cat.points,
+      });
+      if(error){ showMsg(trainingMsg, "No se ha podido guardar el punto: " + error.message, "error"); return; }
+      await loadTrainingDay(selectedTrainingDate);
+    });
+    categoryPickerList.appendChild(btn);
+  });
+  categoryPickerOverlay.classList.remove("hidden");
+}
+document.getElementById("categoryPickerCancelBtn").addEventListener("click", ()=> categoryPickerOverlay.classList.add("hidden"));
+
+function renderExtraPointsToday(){
+  extraPointsTodayEl.innerHTML = "";
+  if(trainingPointsToday.length === 0) return;
+  const title = document.createElement("p");
+  title.style.cssText = "font-weight:bold;color:var(--navy);margin-bottom:8px;";
+  title.textContent = "📌 Puntos extra de hoy";
+  extraPointsTodayEl.appendChild(title);
+  trainingPointsToday.forEach(pt=>{
+    const player = players.find(p=>p.id===pt.player_id);
+    const line = document.createElement("div");
+    line.className = "extra-point-line";
+    const span = document.createElement("span");
+    span.textContent = `${pt.points>0?"+":""}${pt.points} pts — ${player?displayAlias(player):"?"}: ${pt.label}`;
+    line.appendChild(span);
+    const del = document.createElement("button");
+    del.className = "small-del";
+    del.textContent = "✕";
+    del.addEventListener("click", async ()=>{
+      await supabase.from("training_points").delete().eq("id", pt.id);
+      await loadTrainingDay(selectedTrainingDate);
+    });
+    line.appendChild(del);
+    extraPointsTodayEl.appendChild(line);
+  });
+}
+
+// Semana de calendario normal, lunes a domingo — asi el partido (sabado o domingo) y los
+// entrenos reales de esa semana (aunque falte alguno por lluvia o festivo) caen siempre
+// juntos en la misma semana, sin ningun caso especial que programar.
+function getWeekRange(dateStr){
+  const d = new Date(dateStr+"T00:00:00");
+  const day = d.getDay(); // 0=domingo, 1=lunes...
+  const diffToMonday = (day===0 ? -6 : 1-day);
+  const monday = new Date(d); monday.setDate(d.getDate()+diffToMonday);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+  const fmt = x=> x.toISOString().slice(0,10);
+  return { start: fmt(monday), end: fmt(sunday) };
+}
+
+// Reutiliza el mismo criterio de puntos por estadistica (stat_columns.mvp_points) que ya usa
+// el MVP de partido, pero devuelve el total de TODOS los jugadores, no solo los 3 primeros.
+function computeMatchPointsMap(match){
+  const map = {};
+  players.forEach(p=>{
+    if(!match.stats[p.id]) return;
+    let total = 0;
+    statColumns.forEach(col=>{
+      if(col.key === "minutos" || !col.mvp_points) return;
+      const val = match.stats[p.id][col.key];
+      const n = typeof val === "number" ? val : 0;
+      if(n>0) total += n*col.mvp_points;
+    });
+    if(total>0) map[p.id] = total;
+  });
+  return map;
+}
+
+async function renderWeekSummary(){
+  const { start, end } = getWeekRange(selectedTrainingDate);
+  weekRangeLabel.textContent = `${fmtFecha(start)} — ${fmtFecha(end)}`;
+
+  const { data: weekRecords, error: e1 } = await supabase.from("training_records").select("*").eq("club_id", currentClub.id).gte("date", start).lte("date", end);
+  const { data: weekPoints, error: e2 } = await supabase.from("training_points").select("*").eq("club_id", currentClub.id).gte("date", start).lte("date", end);
+  if(e1 || e2){ showMsg(trainingMsg, "No se ha podido calcular el resumen semanal.", "error"); return; }
+
+  const sessionDates = [...new Set((weekRecords||[]).map(r=>r.date))].sort();
+  weekSessionsLabel.textContent = sessionDates.length
+    ? "Entrenos registrados esta semana: " + sessionDates.map(d=> fmtFecha(d)).join(", ")
+    : "Sin entrenos registrados esta semana todavía.";
+
+  const weekMatches = matchesList.filter(m=> m.date >= start && m.date <= end);
+  const matchPointsByPlayer = {};
+  weekMatches.forEach(m=>{
+    const map = computeMatchPointsMap(m);
+    Object.entries(map).forEach(([pid,pts])=>{ matchPointsByPlayer[pid] = (matchPointsByPlayer[pid]||0) + pts; });
+  });
+
+  const attPointsByPlayer = {}, attCountByPlayer = {}, actPointsByPlayer = {}, extraPointsByPlayer = {};
+  const ACT_POINTS = { mejorable:0, correcta:1, excelente:2 };
+  (weekRecords||[]).forEach(r=>{
+    if(r.attendance === "presente"){
+      attPointsByPlayer[r.player_id] = (attPointsByPlayer[r.player_id]||0) + 1;
+      attCountByPlayer[r.player_id] = (attCountByPlayer[r.player_id]||0) + 1;
+      if(r.actitud) actPointsByPlayer[r.player_id] = (actPointsByPlayer[r.player_id]||0) + (ACT_POINTS[r.actitud]||0);
+    }
+  });
+  (weekPoints||[]).forEach(pt=>{
+    extraPointsByPlayer[pt.player_id] = (extraPointsByPlayer[pt.player_id]||0) + pt.points;
+  });
+
+  weekSummaryBody.innerHTML = "";
+  const totalSessions = sessionDates.length;
+  const involvedIds = new Set([
+    ...Object.keys(attPointsByPlayer), ...Object.keys(actPointsByPlayer),
+    ...Object.keys(extraPointsByPlayer), ...Object.keys(matchPointsByPlayer),
+  ]);
+  const rows = players.filter(p=> involvedIds.has(p.id)).map(p=>{
+    const att = attPointsByPlayer[p.id]||0, actP = actPointsByPlayer[p.id]||0;
+    const extra = extraPointsByPlayer[p.id]||0, matchP = matchPointsByPlayer[p.id]||0;
+    const total = att + actP + extra + matchP;
+    return { p, att, actP, extra, matchP, total };
+  }).sort((a,b)=> b.total - a.total);
+
+  if(rows.length === 0){
+    weekSummaryBody.innerHTML = '<tr><td colspan="6" class="hint" style="text-align:center;">Todavía no hay datos esta semana.</td></tr>';
+    return;
+  }
+  rows.forEach(r=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td class="name-td">${escapeHtml(displayAlias(r.p))}</td>
+      <td>${r.att}/${totalSessions}</td><td>${r.actP}</td><td>${r.extra}</td><td>${r.matchP}</td>
+      <td style="font-weight:bold;">${r.total}</td>`;
+    weekSummaryBody.appendChild(tr);
+  });
+}
+
+trainingDateInput.addEventListener("change", ()=> loadTrainingDay(trainingDateInput.value));
 
 // Arranque: comprobar si ya hay sesión guardada
 showScreen(screenLoading);
