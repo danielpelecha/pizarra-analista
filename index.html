@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-16-1">
+<meta name="app-version" content="2026-09-16-2">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -956,9 +956,15 @@
             <input type="text" id="newPlayerPos" placeholder="Ej: MC, DFC...">
           </div>
           <button class="btn" id="addPlayerBtn">➕ Añadir</button>
+          <button class="btn secondary" id="togglePlayerReorderBtn" style="width:auto;">🔀 Reordenar jugadores</button>
         </div>
 
         <div id="playersMsg" class="msg"></div>
+
+        <div id="playerReorderWrap" class="hidden">
+          <p class="hint">Arrastra el símbolo ⠿ para poner primero a los jugadores que más utilizas — este orden se aplica también en Equipo → Control diario.</p>
+          <div id="playerReorderList"></div>
+        </div>
 
         <div id="rosterWrap">
           <p class="empty-roster" id="emptyRosterMsg">Todavía no hay jugadores en la plantilla. Añade el primero arriba.</p>
@@ -1560,12 +1566,73 @@ function escapeHtml(s){
   return d.innerHTML;
 }
 
+document.getElementById("togglePlayerReorderBtn").addEventListener("click", ()=>{
+  playerReorderMode = !playerReorderMode;
+  document.getElementById("playerReorderWrap").classList.toggle("hidden", !playerReorderMode);
+  document.getElementById("rosterWrap").classList.toggle("hidden", playerReorderMode);
+  if(playerReorderMode) renderPlayerReorderList();
+});
+
+function renderPlayerReorderList(){
+  const list = document.getElementById("playerReorderList");
+  list.innerHTML = "";
+  players.forEach(p=>{
+    const row = document.createElement("div");
+    row.className = "stat-manager-row";
+    row.dataset.id = p.id;
+    if(p.id === playerDragId) row.classList.add("dragging");
+
+    const handle = document.createElement("span");
+    handle.className = "stat-drag-handle";
+    handle.textContent = "⠿";
+    row.appendChild(handle);
+
+    const label = document.createElement("div");
+    label.className = "stat-manager-label";
+    label.textContent = (p.num ? p.num+" · " : "") + displayAlias(p);
+    row.appendChild(label);
+
+    handle.addEventListener("pointerdown", (evt)=>{
+      playerDragId = p.id;
+      row.classList.add("dragging");
+      handle.setPointerCapture(evt.pointerId);
+      evt.preventDefault();
+    });
+    handle.addEventListener("pointermove", (evt)=>{
+      if(playerDragId !== p.id) return;
+      const rows = Array.from(list.querySelectorAll(".stat-manager-row"));
+      const overRow = rows.find(r=>{
+        if(r === row) return false;
+        const rect = r.getBoundingClientRect();
+        return evt.clientY > rect.top && evt.clientY < rect.bottom;
+      });
+      if(!overRow) return;
+      const fromIdx = players.findIndex(x=> x.id === playerDragId);
+      const toIdx = players.findIndex(x=> x.id === overRow.dataset.id);
+      if(fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+      const [moved] = players.splice(fromIdx, 1);
+      players.splice(toIdx, 0, moved);
+      renderPlayerReorderList();
+    });
+    handle.addEventListener("pointerup", async ()=>{
+      if(playerDragId !== p.id) return;
+      playerDragId = null;
+      renderPlayerReorderList();
+      await savePlayersOrder();
+    });
+    handle.addEventListener("pointercancel", ()=>{ playerDragId = null; renderPlayerReorderList(); });
+
+    list.appendChild(row);
+  });
+}
+
 async function loadPlayers(){
   clearMsg(playersMsg);
   const { data, error } = await supabase
     .from("players")
     .select("*")
     .eq("club_id", currentClub.id)
+    .order("orden", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
 
   if(error){ showMsg(playersMsg, "No se ha podido cargar la plantilla: " + error.message, "error"); return; }
@@ -2874,6 +2941,18 @@ document.getElementById("toggleStatManagerBtn").addEventListener("click", ()=>{
 });
 
 let statDragId = null;
+let playerDragId = null;
+let playerReorderMode = false; // en Plantilla, alterna entre la vista normal (por dorsal) y la de reordenar
+
+async function savePlayersOrder(){
+  const updates = players.map((p, idx)=>{
+    p.orden = idx + 1;
+    return supabase.from("players").update({ orden: p.orden }).eq("id", p.id);
+  });
+  const results = await Promise.all(updates);
+  const failed = results.find(r=> r.error);
+  if(failed) showMsg(playersMsg, "No se ha podido guardar el nuevo orden: " + failed.error.message, "error");
+}
 
 function renderStatManager(){
   if(!statManagerList) return;
@@ -4742,6 +4821,43 @@ function renderTrainingRecordsList(){
     const rec = trainingRecordsToday[p.id] || { attendance:null, actitud:null };
     const row = document.createElement("div");
     row.className = "training-row" + (rec.attendance && rec.attendance !== "presente" ? " absent" : "");
+    row.dataset.id = p.id;
+    if(p.id === playerDragId) row.classList.add("dragging");
+
+    const handle = document.createElement("span");
+    handle.className = "stat-drag-handle";
+    handle.textContent = "⠿";
+    handle.title = "Arrastra para reordenar";
+    row.appendChild(handle);
+    handle.addEventListener("pointerdown", (evt)=>{
+      playerDragId = p.id;
+      row.classList.add("dragging");
+      handle.setPointerCapture(evt.pointerId);
+      evt.preventDefault();
+    });
+    handle.addEventListener("pointermove", (evt)=>{
+      if(playerDragId !== p.id) return;
+      const rows = Array.from(trainingRecordsListEl.querySelectorAll(".training-row"));
+      const overRow = rows.find(r=>{
+        if(r === row) return false;
+        const rect = r.getBoundingClientRect();
+        return evt.clientY > rect.top && evt.clientY < rect.bottom;
+      });
+      if(!overRow) return;
+      const fromIdx = players.findIndex(x=> x.id === playerDragId);
+      const toIdx = players.findIndex(x=> x.id === overRow.dataset.id);
+      if(fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+      const [moved] = players.splice(fromIdx, 1);
+      players.splice(toIdx, 0, moved);
+      renderTrainingRecordsList();
+    });
+    handle.addEventListener("pointerup", async ()=>{
+      if(playerDragId !== p.id) return;
+      playerDragId = null;
+      renderTrainingRecordsList();
+      await savePlayersOrder();
+    });
+    handle.addEventListener("pointercancel", ()=>{ playerDragId = null; renderTrainingRecordsList(); });
 
     const nameEl = document.createElement("span");
     nameEl.className = "tname";
