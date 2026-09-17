@@ -7,7 +7,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="2026-09-16-2">
+<meta name="app-version" content="2026-09-16-3">
 <style>
   :root{
     --navy:#0d1b3e;
@@ -439,6 +439,19 @@
   }
   .note-editor{ width:100%; margin-top:4px; }
   .live-feed-filter{ display:flex; gap:5px; margin:8px 0 4px; }
+  .equipo-subnav{ display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 18px; border-bottom:2px solid var(--border); padding-bottom:10px; }
+  .equipo-subnav-btn{
+    background:#fff; border:1px solid var(--border); border-radius:8px;
+    padding:8px 14px; font-size:13px; font-weight:bold; color:var(--navy); cursor:pointer;
+  }
+  .equipo-subnav-btn.active{ background:var(--navy); color:#fff; border-color:var(--navy); }
+  .equipo-panel.hidden{ display:none; }
+  .equipo-period-btn{
+    background:#fff; border:1px solid var(--border); border-radius:6px;
+    padding:5px 12px; font-size:11px; font-weight:bold; color:var(--navy); cursor:pointer;
+  }
+  .equipo-period-btn.active{ background:var(--navy); color:#fff; border-color:var(--navy); }
+  .att-cell{ text-align:center; font-size:15px; }
   .live-feed-filter-btn{
     flex:1; background:#fff; border:1px solid var(--border); color:var(--navy);
     border-radius:6px; padding:5px; font-size:11px; font-weight:bold; cursor:pointer;
@@ -1134,38 +1147,97 @@
     </div>
     <div class="tab-panel hidden" id="tabPanelEquipo">
       <div class="card wide">
-        <h1 style="text-align:left;">Equipo — Control diario</h1>
-        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
-          <div>
-            <label for="trainingDate">Fecha de entrenamiento</label>
-            <input type="date" id="trainingDate">
-          </div>
-          <button class="btn secondary" id="toggleCategoryManagerBtn" style="width:auto; margin-top:22px;">🎨 Organizar categorías de puntos</button>
+        <h1 style="text-align:left;">Equipo</h1>
+        <div class="equipo-subnav">
+          <button class="equipo-subnav-btn active" data-equipopanel="diario">📋 Control diario</button>
+          <button class="equipo-subnav-btn" data-equipopanel="asistencia">📅 Historial de asistencia</button>
+          <button class="equipo-subnav-btn" data-equipopanel="puntos">🏆 Historial de puntos</button>
         </div>
 
-        <div id="categoryManagerPanel" class="stat-manager hidden">
-          <p class="hint">Añade, edita o quita las categorías de puntos extra que aparecen al pulsar "+". Los puntos pueden ser negativos.</p>
-          <div id="categoryManagerList"></div>
-          <div style="display:flex; gap:8px; margin-top:10px;">
-            <input type="text" id="newCategoryLabel" placeholder="Nombre de la categoría nueva" style="flex:2;">
-            <input type="number" id="newCategoryPoints" placeholder="Puntos" value="1" style="flex:1;">
-            <button class="btn" id="addCategoryBtn" style="width:auto; margin-top:0;">+ Añadir</button>
+        <div id="equipoPanelDiario" class="equipo-panel">
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+            <div>
+              <label for="trainingDate">Fecha de entrenamiento</label>
+              <input type="date" id="trainingDate">
+            </div>
+            <button class="btn secondary" id="toggleCategoryManagerBtn" style="width:auto; margin-top:22px;">🎨 Organizar categorías de puntos</button>
+          </div>
+
+          <div id="categoryManagerPanel" class="stat-manager hidden">
+            <p class="hint">Añade, edita o quita las categorías de puntos extra que aparecen al pulsar "+". Los puntos pueden ser negativos.</p>
+            <div id="categoryManagerList"></div>
+            <div style="display:flex; gap:8px; margin-top:10px;">
+              <input type="text" id="newCategoryLabel" placeholder="Nombre de la categoría nueva" style="flex:2;">
+              <input type="number" id="newCategoryPoints" placeholder="Puntos" value="1" style="flex:1;">
+              <button class="btn" id="addCategoryBtn" style="width:auto; margin-top:0;">+ Añadir</button>
+            </div>
+          </div>
+
+          <h3 style="margin-top:18px;">Jugadores — <span id="trainingDateLabel"></span></h3>
+          <div id="trainingRecordsList"></div>
+          <div id="trainingMsg" class="msg"></div>
+
+          <div id="extraPointsToday" style="margin-top:16px;"></div>
+
+          <h3 style="margin-top:26px;">📊 Resumen semanal — <span id="weekRangeLabel"></span></h3>
+          <p class="hint" id="weekSessionsLabel"></p>
+          <div style="overflow-x:auto;">
+            <table class="data-table" id="weekSummaryTable">
+              <thead><tr><th>Jugador</th><th>Asistencia</th><th>Actitud</th><th>Extra</th><th>Partido</th><th>Total</th></tr></thead>
+              <tbody id="weekSummaryBody"></tbody>
+            </table>
           </div>
         </div>
 
-        <h3 style="margin-top:18px;">Jugadores — <span id="trainingDateLabel"></span></h3>
-        <div id="trainingRecordsList"></div>
-        <div id="trainingMsg" class="msg"></div>
+        <div id="equipoPanelAsistencia" class="equipo-panel hidden">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px;">
+            <p style="font-size:15px; font-weight:bold; color:var(--navy); margin:0;">📅 Historial de asistencia</p>
+            <div style="display:flex; gap:4px;">
+              <button class="equipo-period-btn" id="attPeriodWeekBtn" data-period="week">Semana</button>
+              <button class="equipo-period-btn active" id="attPeriodMonthBtn" data-period="month">Mes</button>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:10px;">
+            <button class="btn secondary" id="attPrevBtn" style="width:auto; margin-top:0; padding:6px 14px;">‹</button>
+            <p style="font-weight:bold; color:var(--navy); margin:0;" id="attPeriodLabel"></p>
+            <button class="btn secondary" id="attNextBtn" style="width:auto; margin-top:0; padding:6px 14px;">›</button>
+          </div>
+          <p class="hint" id="attPeriodHint" style="text-align:center;"></p>
+          <div style="overflow-x:auto;">
+            <table class="data-table" id="attHistoryTable">
+              <thead><tr id="attHistoryHead"></tr></thead>
+              <tbody id="attHistoryBody"></tbody>
+            </table>
+          </div>
+          <div style="display:flex; gap:14px; margin-top:10px; font-size:11px; color:var(--grey); flex-wrap:wrap;">
+            <span>✅ Presente</span><span>🟨 Ausente justificada</span><span>🟥 Ausente injustificada</span><span>— Sin marcar / sin entreno</span>
+          </div>
+        </div>
 
-        <div id="extraPointsToday" style="margin-top:16px;"></div>
-
-        <h3 style="margin-top:26px;">📊 Resumen semanal — <span id="weekRangeLabel"></span></h3>
-        <p class="hint" id="weekSessionsLabel"></p>
-        <div style="overflow-x:auto;">
-          <table class="data-table" id="weekSummaryTable">
-            <thead><tr><th>Jugador</th><th>Asistencia</th><th>Actitud</th><th>Extra</th><th>Partido</th><th>Total</th></tr></thead>
-            <tbody id="weekSummaryBody"></tbody>
-          </table>
+        <div id="equipoPanelPuntos" class="equipo-panel hidden">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px;">
+            <p style="font-size:15px; font-weight:bold; color:var(--navy); margin:0;">🏆 Histórico de puntos (entreno + partido)</p>
+            <div style="display:flex; gap:4px;">
+              <button class="equipo-period-btn active" id="ptsPeriodWeekBtn" data-period="week">Semana</button>
+              <button class="equipo-period-btn" id="ptsPeriodMonthBtn" data-period="month">Mes</button>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:10px;">
+            <button class="btn secondary" id="ptsPrevBtn" style="width:auto; margin-top:0; padding:6px 14px;">‹</button>
+            <p style="font-weight:bold; color:var(--navy); margin:0;" id="ptsPeriodLabel"></p>
+            <button class="btn secondary" id="ptsNextBtn" style="width:auto; margin-top:0; padding:6px 14px;">›</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table" id="ptsHistoryTable">
+              <thead><tr>
+                <th>Jugador</th>
+                <th style="color:#3b6d11;">🏃 Entreno</th>
+                <th style="color:#185fa5;">⚽ Partido</th>
+                <th>Total</th>
+              </tr></thead>
+              <tbody id="ptsHistoryBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -5062,6 +5134,169 @@ async function renderWeekSummary(){
 }
 
 trainingDateInput.addEventListener("change", ()=> loadTrainingDay(trainingDateInput.value));
+
+// ==================================================================
+// EQUIPO: subnavegación entre Control diario / Historial asistencia / Historial puntos
+// ==================================================================
+let equipoActivePanel = "diario";
+document.querySelectorAll(".equipo-subnav-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    equipoActivePanel = btn.dataset.equipopanel;
+    document.querySelectorAll(".equipo-subnav-btn").forEach(b=> b.classList.toggle("active", b===btn));
+    document.getElementById("equipoPanelDiario").classList.toggle("hidden", equipoActivePanel!=="diario");
+    document.getElementById("equipoPanelAsistencia").classList.toggle("hidden", equipoActivePanel!=="asistencia");
+    document.getElementById("equipoPanelPuntos").classList.toggle("hidden", equipoActivePanel!=="puntos");
+    if(equipoActivePanel === "asistencia") renderAttendanceHistory();
+    if(equipoActivePanel === "puntos") renderPointsHistory();
+  });
+});
+
+function ymd(d){ return d.toISOString().slice(0,10); }
+function firstOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+function lastOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0); }
+const MES_NOMBRES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+
+// ---- Historial de asistencia ----
+let attPeriodMode = "month";
+let attAnchor = new Date();
+
+function attCurrentRange(){
+  if(attPeriodMode === "week"){
+    const r = getWeekRange(ymd(attAnchor));
+    return { start:r.start, end:r.end, label: `${fmtFecha(r.start)} — ${fmtFecha(r.end)}` };
+  }
+  const start = firstOfMonth(attAnchor), end = lastOfMonth(attAnchor);
+  return { start: ymd(start), end: ymd(end), label: `${MES_NOMBRES[attAnchor.getMonth()]} ${attAnchor.getFullYear()}` };
+}
+
+document.getElementById("attPeriodWeekBtn").addEventListener("click", ()=>{ attPeriodMode="week"; document.getElementById("attPeriodWeekBtn").classList.add("active"); document.getElementById("attPeriodMonthBtn").classList.remove("active"); renderAttendanceHistory(); });
+document.getElementById("attPeriodMonthBtn").addEventListener("click", ()=>{ attPeriodMode="month"; document.getElementById("attPeriodMonthBtn").classList.add("active"); document.getElementById("attPeriodWeekBtn").classList.remove("active"); renderAttendanceHistory(); });
+document.getElementById("attPrevBtn").addEventListener("click", ()=>{
+  attAnchor = attPeriodMode==="week" ? new Date(attAnchor.getTime()-7*86400000) : new Date(attAnchor.getFullYear(), attAnchor.getMonth()-1, 1);
+  renderAttendanceHistory();
+});
+document.getElementById("attNextBtn").addEventListener("click", ()=>{
+  attAnchor = attPeriodMode==="week" ? new Date(attAnchor.getTime()+7*86400000) : new Date(attAnchor.getFullYear(), attAnchor.getMonth()+1, 1);
+  renderAttendanceHistory();
+});
+
+async function renderAttendanceHistory(){
+  const { start, end, label } = attCurrentRange();
+  document.getElementById("attPeriodLabel").textContent = label;
+
+  const { data: records, error } = await supabase.from("training_records").select("*").eq("club_id", currentClub.id).gte("date", start).lte("date", end);
+  if(error){ showMsg(trainingMsg, "No se ha podido cargar el historial: " + error.message, "error"); return; }
+
+  const dates = [...new Set((records||[]).map(r=>r.date))].sort();
+  document.getElementById("attPeriodHint").textContent = dates.length
+    ? "Solo se muestran los días con entrenamiento registrado."
+    : "Todavía no hay entrenamientos registrados en este periodo.";
+
+  const head = document.getElementById("attHistoryHead");
+  head.innerHTML = "<th>Jugador</th>" + dates.map(d=>{
+    const dd = new Date(d+"T00:00:00");
+    return `<th style="text-align:center;">${dd.toLocaleDateString("es-ES",{weekday:"short"})[0].toUpperCase()} ${dd.getDate()}</th>`;
+  }).join("") + '<th style="text-align:center;">%</th>';
+
+  const byPlayerDate = {};
+  (records||[]).forEach(r=>{ byPlayerDate[r.player_id+"|"+r.date] = r.attendance; });
+
+  const ICONS = { presente:"✅", ausente_justificada:"🟨", ausente_injustificada:"🟥" };
+  const body = document.getElementById("attHistoryBody");
+  body.innerHTML = "";
+  if(dates.length === 0){
+    body.innerHTML = `<tr><td colspan="1" class="hint" style="text-align:center;">Sin datos.</td></tr>`;
+    return;
+  }
+  players.forEach(p=>{
+    let presentCount = 0, recordedCount = 0;
+    const cells = dates.map(d=>{
+      const att = byPlayerDate[p.id+"|"+d];
+      if(att){ recordedCount++; if(att==="presente") presentCount++; }
+      return `<td class="att-cell">${att ? ICONS[att] : "—"}</td>`;
+    }).join("");
+    const pct = recordedCount ? Math.round(presentCount/dates.length*100) : null;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td class="name-td">${escapeHtml((p.num?p.num+" ":"")+displayAlias(p))}</td>${cells}<td style="text-align:center;font-weight:bold;">${pct===null?"—":pct+"%"}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+// ---- Historial de puntos (Semana / Mes, con Entreno y Partido discriminados) ----
+let ptsPeriodMode = "week";
+let ptsAnchor = new Date();
+
+function ptsCurrentRange(){
+  if(ptsPeriodMode === "week"){
+    const r = getWeekRange(ymd(ptsAnchor));
+    return { start:r.start, end:r.end, label: `Semana del ${fmtFecha(r.start)} al ${fmtFecha(r.end)}` };
+  }
+  const start = firstOfMonth(ptsAnchor), end = lastOfMonth(ptsAnchor);
+  return { start: ymd(start), end: ymd(end), label: `${MES_NOMBRES[ptsAnchor.getMonth()]} ${ptsAnchor.getFullYear()}` };
+}
+
+document.getElementById("ptsPeriodWeekBtn").addEventListener("click", ()=>{ ptsPeriodMode="week"; document.getElementById("ptsPeriodWeekBtn").classList.add("active"); document.getElementById("ptsPeriodMonthBtn").classList.remove("active"); renderPointsHistory(); });
+document.getElementById("ptsPeriodMonthBtn").addEventListener("click", ()=>{ ptsPeriodMode="month"; document.getElementById("ptsPeriodMonthBtn").classList.add("active"); document.getElementById("ptsPeriodWeekBtn").classList.remove("active"); renderPointsHistory(); });
+document.getElementById("ptsPrevBtn").addEventListener("click", ()=>{
+  ptsAnchor = ptsPeriodMode==="week" ? new Date(ptsAnchor.getTime()-7*86400000) : new Date(ptsAnchor.getFullYear(), ptsAnchor.getMonth()-1, 1);
+  renderPointsHistory();
+});
+document.getElementById("ptsNextBtn").addEventListener("click", ()=>{
+  ptsAnchor = ptsPeriodMode==="week" ? new Date(ptsAnchor.getTime()+7*86400000) : new Date(ptsAnchor.getFullYear(), ptsAnchor.getMonth()+1, 1);
+  renderPointsHistory();
+});
+
+// Calcula, para un rango de fechas cualquiera, el total de puntos de Entreno (asistencia +
+// actitud + extra) y de Partido (mismo criterio que el MVP de partido) por jugador.
+async function computePointsBreakdown(start, end){
+  const { data: records } = await supabase.from("training_records").select("*").eq("club_id", currentClub.id).gte("date", start).lte("date", end);
+  const { data: points } = await supabase.from("training_points").select("*").eq("club_id", currentClub.id).gte("date", start).lte("date", end);
+  const ACT_POINTS = { mejorable:0, correcta:1, excelente:2 };
+
+  const entreno = {};
+  (records||[]).forEach(r=>{
+    if(r.attendance === "presente"){
+      entreno[r.player_id] = (entreno[r.player_id]||0) + 1;
+      if(r.actitud) entreno[r.player_id] += (ACT_POINTS[r.actitud]||0);
+    }
+  });
+  (points||[]).forEach(pt=>{ entreno[pt.player_id] = (entreno[pt.player_id]||0) + pt.points; });
+
+  const partido = {};
+  matchesList.filter(m=> m.date >= start && m.date <= end).forEach(m=>{
+    Object.entries(computeMatchPointsMap(m)).forEach(([pid,pts])=>{ partido[pid] = (partido[pid]||0) + pts; });
+  });
+
+  return { entreno, partido };
+}
+
+async function renderPointsHistory(){
+  const { start, end, label } = ptsCurrentRange();
+  document.getElementById("ptsPeriodLabel").textContent = label;
+
+  const { entreno, partido } = await computePointsBreakdown(start, end);
+  const involvedIds = new Set([...Object.keys(entreno), ...Object.keys(partido)]);
+  const rows = players.filter(p=> involvedIds.has(p.id)).map(p=>{
+    const e = entreno[p.id]||0, pa = partido[p.id]||0;
+    return { p, e, pa, total: e+pa };
+  }).sort((a,b)=> b.total - a.total);
+
+  const body = document.getElementById("ptsHistoryBody");
+  body.innerHTML = "";
+  if(rows.length === 0){
+    body.innerHTML = `<tr><td colspan="4" class="hint" style="text-align:center;">Todavía no hay datos en este periodo.</td></tr>`;
+    return;
+  }
+  const medals = ["🥇","🥈","🥉"];
+  rows.forEach((r, idx)=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td class="name-td">${medals[idx]||""} ${escapeHtml((r.p.num?r.p.num+" ":"")+displayAlias(r.p))}</td>
+      <td style="text-align:center;color:#3b6d11;font-weight:bold;">${r.e}</td>
+      <td style="text-align:center;color:#185fa5;font-weight:bold;">${r.pa}</td>
+      <td style="text-align:center;font-weight:bold;">${r.total}</td>`;
+    body.appendChild(tr);
+  });
+}
 
 // Arranque: comprobar si ya hay sesión guardada
 showScreen(screenLoading);
