@@ -1603,7 +1603,10 @@ function renderPlayers(){
 
   rosterBody.innerHTML = "";
 
-  const sorted = [...players].sort((a,b)=>{
+  // Respeta el orden guardado manualmente (campo "orden"). Si ningún jugador
+  // tiene "orden" asignado todavía, se usa el dorsal como orden por defecto.
+  const anyManualOrder = players.some(p => p.orden !== null && p.orden !== undefined);
+  const sorted = anyManualOrder ? [...players] : [...players].sort((a,b)=>{
     const na = parseInt(a.num, 10); const nb = parseInt(b.num, 10);
     const va = isNaN(na) ? 9999 : na;
     const vb = isNaN(nb) ? 9999 : nb;
