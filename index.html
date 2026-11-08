@@ -1262,7 +1262,7 @@ Kit.loadFont();
               <button class="btn download-btn-lineup" id="downloadLineupPdfBtn" style="width:auto; margin-top:16px; margin-left:8px; background:var(--navy);">⬇️ Descargar alineación (PDF)</button>
               <button class="btn secondary" id="resetPositionsBtn" style="width:auto; margin-top:16px; margin-left:8px;">↺ Restablecer posiciones</button>
             </div>
-            <p class="hint">Puedes arrastrar directamente a cada jugador sobre el campo (ratón o dedo) para ajustar su posición exacta. Haz doble clic sobre una camiseta para ajustar el tamaño y la posición del nombre.</p>
+            <p class="hint">Puedes arrastrar directamente a cada jugador sobre el campo (ratón o dedo) para ajustar su posición exacta. Haz doble clic sobre una camiseta para ajustar el tamaño y la posición del nombre. En Medio campo, toca una camiseta y tira de una de sus esquinas para agrandarla o reducirla.</p>
           </div>
         </div>
       </div>
@@ -2208,6 +2208,11 @@ const pitchCtx = pitchCanvas.getContext("2d");
 // Equipaciones en el campo: escalas aprobadas (0,40 titulares en Campo completo; 0,30 suplentes).
 const KIT_SCALE_FULL = 0.40, KIT_SCALE_SUB = 0.30, KIT_SCALE_MEDIO = 0.27;
 let lastSubKitRects = []; // rectángulos de las camisetas de suplentes dibujadas (para el doble clic)
+// Medio campo (ABPs): cada camiseta tiene su propio tamaño (starterPositions[i].ms, 1 = estándar).
+// Se selecciona tocándola; aparecen sus esquinas y tirando de una se agranda/reduce proporcionalmente.
+let selectedMedioIdx = -1;
+let resizingMedio = null; // { idx, ms0, d0 }
+let lastStarterKitRects = [];
 let kitRedrawPending = false;
 function scheduleKitRedraw(){
   if(kitRedrawPending) return;
@@ -2641,6 +2646,7 @@ function drawPitch(){
   const nameColor = "#0a0a0a";
 
   lastSubKitRects = [];
+  lastStarterKitRects = [];
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0,0,W,H);
@@ -2737,12 +2743,27 @@ function drawPitch(){
     const cx = PITCH_LEFT + slot.x*fieldW;
     const cy = PITCH_TOP + y*fieldH;
     const player = players.find(p=> p.id === lineupStarters[idx]);
-    const sc = shape === "medio" ? KIT_SCALE_MEDIO : KIT_SCALE_FULL;
+    const sc = shape === "medio" ? KIT_SCALE_MEDIO * (slot.ms || 1) : KIT_SCALE_FULL;
     const kitName = player ? displayAlias(player) : (slot.label || "");
     Kit.draw(ctx, cx, cy, sc, {
       name: kitName, num: player ? (player.num || "") : "",
       gk: !!slot.isGK, adj: player ? player.kit_name : null,
     }, scheduleKitRedraw);
+    if(shape === "medio"){
+      const r = { x: cx - 114*sc, y: cy - 42*sc - 80*sc, w: 228*sc, h: 245*sc };
+      lastStarterKitRects[idx] = r;
+      if(idx === selectedMedioIdx){
+        ctx.save();
+        ctx.setLineDash([7,5]); ctx.lineWidth = 2; ctx.strokeStyle = "#E8641E";
+        ctx.strokeRect(r.x, r.y, r.w, r.h);
+        ctx.setLineDash([]);
+        [[r.x,r.y],[r.x+r.w,r.y],[r.x+r.w,r.y+r.h],[r.x,r.y+r.h]].forEach(([hx,hy])=>{
+          ctx.beginPath(); ctx.arc(hx, hy, 9, 0, Math.PI*2);
+          ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = "#E8641E"; ctx.stroke();
+        });
+        ctx.restore();
+      }
+    }
   });
 
   // ---- Suplentes: solo texto (sin círculos), en gris, en rejilla de hasta 5 columnas ----
@@ -2849,7 +2870,7 @@ function findNearestStarter(px, py){
     if(isMedio && slot.y > MEDIO_CUTOFF) return; // oculto en este modo, no se puede tocar
     const cx = PITCH_LEFT + slot.x*(PITCH_RIGHT-PITCH_LEFT);
     const cy = PITCH_TOP + displayY(slot.y)*playH;
-    const d = Math.hypot(px-cx, py-cy);
+    const d = Math.hypot(px-cx, py-cy) / (isMedio ? (slot.ms || 1) : 1);
     if(d < bestDist){ bestDist = d; best = idx; }
   });
   return best;
@@ -2881,6 +2902,17 @@ pitchCanvas.addEventListener("pointerdown", (evt)=>{
     pitchCanvas.setPointerCapture(evt.pointerId);
     evt.preventDefault();
     return;
+  }
+  if(pitchShapeSelect.value === "medio" && selectedMedioIdx >= 0 && lastStarterKitRects[selectedMedioIdx]){
+    const r = lastStarterKitRects[selectedMedioIdx];
+    const corners = [[r.x,r.y],[r.x+r.w,r.y],[r.x+r.w,r.y+r.h],[r.x,r.y+r.h]];
+    if(corners.some(([hx,hy])=> Math.hypot(pos.x-hx, pos.y-hy) < 22)){
+      const ccx = r.x + r.w/2, ccy = r.y + r.h/2;
+      resizingMedio = { idx: selectedMedioIdx, ms0: starterPositions[selectedMedioIdx].ms || 1, d0: Math.max(10, Math.hypot(pos.x-ccx, pos.y-ccy)), ccx, ccy };
+      pitchCanvas.setPointerCapture(evt.pointerId);
+      evt.preventDefault();
+      return;
+    }
   }
   if(pitchShapeSelect.value === "medio"){
     const { PITCH_LEFT, PITCH_RIGHT } = pitchGeom();
@@ -2940,6 +2972,10 @@ pitchCanvas.addEventListener("pointerdown", (evt)=>{
     }
   }
   const idx = findNearestStarter(pos.x, pos.y);
+  if(pitchShapeSelect.value === "medio"){
+    const newSel = idx >= 0 ? idx : -1;
+    if(newSel !== selectedMedioIdx){ selectedMedioIdx = newSel; drawPitch(); }
+  }
   if(idx >= 0){
     dragIdx = idx;
     pitchCanvas.setPointerCapture(evt.pointerId);
@@ -2981,6 +3017,14 @@ pitchCanvas.addEventListener("pointermove", (evt)=>{
     evt.preventDefault();
     return;
   }
+  if(resizingMedio){
+    const pos = canvasPosFromEvent(evt);
+    const d = Math.hypot(pos.x-resizingMedio.ccx, pos.y-resizingMedio.ccy);
+    starterPositions[resizingMedio.idx].ms = Math.min(3, Math.max(0.5, resizingMedio.ms0 * d / resizingMedio.d0));
+    drawPitch();
+    evt.preventDefault();
+    return;
+  }
   if(dragIdx < 0) return;
   const { PITCH_TOP, PITCH_BOTTOM, PITCH_LEFT, PITCH_RIGHT } = pitchGeom();
   const pos = canvasPosFromEvent(evt);
@@ -2996,6 +3040,11 @@ pitchCanvas.addEventListener("pointermove", (evt)=>{
 });
 
 function endDrag(evt){
+  if(resizingMedio){
+    resizingMedio = null;
+    if(evt && evt.pointerId !== undefined){ try{ pitchCanvas.releasePointerCapture(evt.pointerId); }catch(e){} }
+    return;
+  }
   if(abpLineDraft){
     // Solo se guarda si el trazo tiene un largo minimo, para no crear puntos sueltos con un simple toque.
     const dx = (abpLineDraft.x2-abpLineDraft.x1)*pitchCanvas.width, dy = (abpLineDraft.y2-abpLineDraft.y1)*pitchCanvas.height;
@@ -3218,6 +3267,7 @@ pitchCanvas.addEventListener("dblclick", (evt)=>{
 });
 
 document.getElementById("downloadLineupBtn").addEventListener("click", ()=>{
+  if(selectedMedioIdx >= 0){ selectedMedioIdx = -1; drawPitch(); } // sin marcas de selección en la descarga
   const link = document.createElement("a");
   const rivalSlug = (matchRival.value || "alineacion").trim().replace(/\s+/g,"_");
   link.download = `alineacion_${rivalSlug}.png`;
@@ -3226,6 +3276,7 @@ document.getElementById("downloadLineupBtn").addEventListener("click", ()=>{
 });
 
 document.getElementById("downloadLineupPdfBtn").addEventListener("click", ()=>{
+  if(selectedMedioIdx >= 0){ selectedMedioIdx = -1; drawPitch(); } // sin marcas de selección en la descarga
   if(!window.jspdf){
     alert("No se ha podido cargar el generador de PDF. Comprueba tu conexión a internet e inténtalo de nuevo.");
     return;
