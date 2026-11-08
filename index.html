@@ -817,6 +817,177 @@
   .hidden{ display:none !important; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<script>
+// ==================================================================
+// EQUIPACIONES (camiseta + pantalón) — diseño aprobado el 08/11/2026
+// Un único dibujo (SVG) que se usa en la Alineación (como imagen sobre el canvas),
+// en el editor de nombre y en la pantalla del partido, para que se vea igual en todas partes.
+// Coordenadas de la camiseta: centro del pecho en (0,0); ancho total con mangas ±114;
+// alto de -80 (cuello) a 165 (bajo del pantalón).
+// ==================================================================
+window.Kit = (function(){
+  const SHIRT = "M-30,-80 C-16,-74 16,-74 30,-80 L74,-64 C88,-58 96,-48 102,-36 L114,-4 L80,8 L70,-22 C68,10 70,50 72,90 C30,97 -30,97 -72,90 C-70,50 -68,10 -70,-22 L-80,8 L-114,-4 L-102,-36 C-96,-48 -88,-58 -74,-64 Z";
+  const SHORTS = "M-66,84 L66,84 C70,110 74,135 79,160 L10,165 C6,150 3,140 0,133 C-3,140 -6,150 -10,165 L-79,160 C-74,135 -70,110 -66,84 Z";
+  const FD = ["M-64,-20 C-44,-6 -30,8 -18,26","M64,-18 C46,-2 34,12 22,30","M-60,44 C-38,50 -16,52 6,50","M58,62 C38,68 16,70 -8,68","M-96,-30 C-90,-20 -87,-10 -85,2","M94,-34 C90,-22 87,-12 85,0","M-40,80 C-20,84 10,85 36,82"];
+  const FL = ["M-61,-25 C-42,-11 -28,3 -15,20","M61,-23 C43,-7 31,7 19,24","M-57,39 C-36,45 -14,47 8,45","M55,57 C36,63 14,65 -10,63"];
+  const ORANGE = "#E8641E";
+  const VB = { x:-130, y:-100, w:260, h:290 };
+  const FONT_STACK = "OswaldK, Oswald, 'Arial Narrow', Arial, sans-serif";
+
+  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+  // ---- Tipografía: Oswald incrustada dentro del SVG (las imágenes SVG no pueden cargar fuentes externas) ----
+  let fontCss = "";
+  let fontPromise = null;
+  const cache = new Map();
+  function loadFont(){
+    if(fontPromise) return fontPromise;
+    fontPromise = (async ()=>{
+      try{
+        const css = await (await fetch("https://fonts.googleapis.com/css2?family=Oswald:wght@600&display=swap")).text();
+        const urls = [...css.matchAll(/url\((https:[^)]+)\)/g)].map(m=> m[1]);
+        if(urls.length){
+          const buf = await (await fetch(urls[urls.length-1])).arrayBuffer();
+          const bytes = new Uint8Array(buf); let bin = "";
+          for(let i=0; i<bytes.length; i+=0x8000){ bin += String.fromCharCode.apply(null, bytes.subarray(i, i+0x8000)); }
+          fontCss = "@font-face{font-family:'OswaldK';font-weight:600;src:url(data:font/woff2;base64," + btoa(bin) + ") format('woff2');}";
+        }
+      }catch(e){ fontCss = ""; }
+      try{ await document.fonts.load("600 40px Oswald"); }catch(e){}
+      cache.clear();
+    })();
+    return fontPromise;
+  }
+
+  // ---- Nombre: dos palabras = dos líneas (nombre arriba en arco, apellido encima del dorsal);
+  //      una palabra = una línea grande que ocupa el alto de las dos ----
+  function nameParts(name){
+    const t = String(name||"").toUpperCase().trim().split(/\s+/).filter(Boolean);
+    if(t.length >= 2) return [t[0], t.slice(1).join(" ")];
+    return [t[0] || ""];
+  }
+  let mctx = null;
+  function measure(text, fs){
+    if(!mctx) mctx = document.createElement("canvas").getContext("2d");
+    mctx.font = "600 " + fs + "px Oswald, 'Arial Narrow', Arial";
+    return Math.max(1, mctx.measureText(text).width);
+  }
+  function defaultLines(name){
+    const parts = nameParts(name);
+    const L = parts.length === 2
+      ? [{k:"arc", t:parts[0], fs:34, cx:0, by:-30, s:1, maxw:124}, {k:"flat", t:parts[1], fs:40, cx:0, by:14, s:1, maxw:134}]
+      : [{k:"flat", t:parts[0], fs:62, cx:0, by:12, s:1, maxw:134}];
+    L.forEach(l=>{ l.s = Math.min(1, l.maxw / measure(l.t, l.fs)); });
+    return L;
+  }
+  // adj = ajuste manual guardado en la ficha del jugador: { t: nombre al guardarlo, lines:[{cx,by,s}] }.
+  // Si el nombre ha cambiado desde entonces, se ignora y se vuelve al tamaño estándar.
+  function resolveLines(name, adj){
+    const L = defaultLines(name);
+    if(adj && adj.t === String(name||"").toUpperCase().trim() && Array.isArray(adj.lines) && adj.lines.length === L.length){
+      L.forEach((l,i)=>{ const a = adj.lines[i]; if(a && isFinite(a.cx) && isFinite(a.by) && isFinite(a.s)){ l.cx=a.cx; l.by=a.by; l.s=a.s; } });
+    }
+    return L;
+  }
+  function textStyle(gk){
+    return 'font-family="' + FONT_STACK + '" font-weight="600" fill="#000" stroke="' + (gk ? "#ffffff" : ORANGE) + '" stroke-width="3" paint-order="stroke" stroke-linejoin="round" text-anchor="middle"';
+  }
+  function lineInner(l, gk, u){
+    const st = textStyle(gk);
+    return l.k === "arc"
+      ? '<text ' + st + ' font-size="' + l.fs + '"><textPath href="#arcL' + u + '" startOffset="50%">' + esc(l.t) + '</textPath></text>'
+      : '<text ' + st + ' font-size="' + l.fs + '" x="0" y="0">' + esc(l.t) + '</text>';
+  }
+  function linesSvg(L, gk, u){
+    return L.map(l=> '<g transform="translate(' + l.cx + ',' + l.by + ') scale(' + l.s + ')">' + lineInner(l, gk, u) + '</g>').join("");
+  }
+
+  function defs(u){
+    return '<linearGradient id="hs'+u+'" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity=".42"/><stop offset=".22" stop-color="#000" stop-opacity=".05"/><stop offset=".45" stop-color="#fff" stop-opacity=".08"/><stop offset=".78" stop-color="#000" stop-opacity=".1"/><stop offset="1" stop-color="#000" stop-opacity=".5"/></linearGradient>'
+      + '<linearGradient id="vs'+u+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".12"/><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></linearGradient>'
+      + '<radialGradient id="hl'+u+'"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>'
+      + '<filter id="soft'+u+'" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2"/></filter>'
+      + '<filter id="b6'+u+'" x="-50%" y="-200%" width="200%" height="500%"><feGaussianBlur stdDeviation="9"/></filter>'
+      + '<filter id="drop'+u+'" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity=".35"/></filter>'
+      + '<path id="arcL'+u+'" d="M-100,0 Q0,-22 100,0" fill="none"/>'
+      + '<clipPath id="cs'+u+'"><path d="'+SHIRT+'"/></clipPath><clipPath id="cp'+u+'"><path d="'+SHORTS+'"/></clipPath>';
+  }
+
+  // Cuerpo de la equipación (sin el nombre). gk = portero (camiseta dorada).
+  function body(u, gk, num){
+    const sk = gk ? "#E8A317" : "#F4F4F2", sh = "#1a1a1a", tr = "#1a1a1a", ac = gk ? "#ffffff" : ORANGE, nc = gk ? "#1a1a1a" : "#141414";
+    let s = '<g filter="url(#drop'+u+')">';
+    s += '<path d="'+SHORTS+'" fill="'+sh+'"/>';
+    s += '<g clip-path="url(#cp'+u+')"><rect x="-90" y="80" width="180" height="90" fill="url(#hs'+u+')"/><rect x="-90" y="80" width="180" height="90" fill="url(#vs'+u+')"/>'
+      + '<path d="M-73,90 L-80,162 M73,90 L80,162" stroke="'+ac+'" stroke-width="7"/><path d="M-69,90 L-75,162 M69,90 L75,162" stroke="#fff" stroke-width="2.5"/>'
+      + '<g filter="url(#soft'+u+')" fill="none" stroke-linecap="round"><path d="M0,135 C-10,120 -25,108 -40,100 M0,135 C10,120 25,108 40,100" stroke="#000" stroke-opacity=".45" stroke-width="5"/>'
+      + '<path d="M-52,95 C-38,100 -24,104 -12,112 M40,128 C46,140 46,150 44,160" stroke="#fff" stroke-opacity=".2" stroke-width="3"/></g>'
+      + '<rect x="-90" y="154" width="180" height="12" fill="#000" fill-opacity=".25"/></g>';
+    s += '<path d="'+SHORTS+'" fill="none" stroke="#000" stroke-opacity=".5" stroke-width="1.5"/>';
+    s += '<path d="'+SHIRT+'" fill="'+sk+'"/>';
+    s += '<g clip-path="url(#cs'+u+')">';
+    s += '<text x="0" y="78" text-anchor="middle" font-family="'+FONT_STACK+'" font-size="60" font-weight="600" fill="'+nc+'" stroke="'+ac+'" stroke-width="2">'+esc(num)+'</text>';
+    s += '<rect x="-130" y="-90" width="260" height="190" fill="url(#hs'+u+')"/><rect x="-130" y="-90" width="260" height="190" fill="url(#vs'+u+')"/>';
+    s += '<ellipse cx="-22" cy="-15" rx="45" ry="60" fill="url(#hl'+u+')"/>';
+    s += '<g filter="url(#soft'+u+')" fill="none" stroke-linecap="round">';
+    FD.forEach(d=>{ s += '<path d="'+d+'" stroke="#000" stroke-opacity=".22" stroke-width="6"/>'; });
+    FL.forEach(d=>{ s += '<path d="'+d+'" stroke="#fff" stroke-opacity=".4" stroke-width="2.5"/>'; });
+    s += '<path d="M-70,-22 C-70,10 -70,50 -72,90 M70,-22 C70,10 70,50 72,90" stroke="#000" stroke-opacity=".32" stroke-width="10"/></g>';
+    s += '<path d="M-74,-64 C-70,-45 -70,-35 -70,-22 M74,-64 C70,-45 70,-35 70,-22" fill="none" stroke="#000" stroke-opacity=".22" stroke-width="1.5" stroke-dasharray="3 2"/>';
+    s += '<path d="M-114,-4 L-80,8 L-83,-2 L-112,-14 Z M114,-4 L80,8 L83,-2 L112,-14 Z" fill="'+tr+'"/><path d="M-112,-14 L-83,-2 M112,-14 L83,-2" stroke="'+ac+'" stroke-width="2.5"/>';
+    s += '<path d="M-30,-80 C-16,-74 16,-74 30,-80" fill="none" stroke="'+tr+'" stroke-width="12"/><path d="M-30,-73 C-16,-67 16,-67 30,-73" fill="none" stroke="'+ac+'" stroke-width="2"/>';
+    s += '</g>';
+    s += '<path d="'+SHIRT+'" fill="none" stroke="#000" stroke-opacity=".45" stroke-width="1.5"/>';
+    s += '</g>';
+    return s;
+  }
+  function shadow(u){ return '<ellipse cx="4" cy="170" rx="90" ry="13" fill="#000" fill-opacity=".45" filter="url(#b6'+u+')"/>'; }
+
+  // Contenido interior (para insertarlo dentro de otro <svg>, p.ej. en el editor o en la pantalla del partido).
+  function inner(o){
+    const u = o.uid || "k";
+    const L = o.lines || resolveLines(o.name, o.adj);
+    return '<defs>' + defs(u) + '</defs>' + (o.noShadow ? "" : shadow(u)) + body(u, !!o.gk, o.num)
+      + (o.noNames ? "" : '<g clip-path="url(#cs'+u+')">' + linesSvg(L, !!o.gk, u) + '</g>');
+  }
+  // SVG completo e independiente (con la fuente incrustada) — para usarlo como imagen.
+  function svg(o){
+    const px = o.px || 2;
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+VB.x+' '+VB.y+' '+VB.w+' '+VB.h+'" width="'+(VB.w*px)+'" height="'+(VB.h*px)+'">'
+      + (fontCss ? '<style>' + fontCss + '</style>' : '') + inner(o) + '</svg>';
+  }
+
+  // Imagen cacheada para dibujar en un canvas. Devuelve null mientras se está preparando;
+  // al terminar llama a onReady para repintar.
+  function image(o, onReady){
+    const key = JSON.stringify([o.name||"", o.num||"", !!o.gk, o.adj||null, fontCss.length]);
+    let e = cache.get(key);
+    if(e){
+      if(!e.ready && onReady) e.waiters.push(onReady);
+      return e.ready ? e.img : null;
+    }
+    const img = new Image();
+    e = { img, ready:false, waiters: onReady ? [onReady] : [] };
+    cache.set(key, e);
+    img.onload = ()=>{ e.ready = true; const w = e.waiters; e.waiters = []; w.forEach(f=>{ try{ f(); }catch(err){} }); };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg({ name:o.name, num:o.num, gk:o.gk, adj:o.adj, uid:"i" }));
+    return null;
+  }
+  // Dibuja la equipación en un canvas. (cx,cy) = centro visual del jugador; sc = escala
+  // (0,40 = tamaño aprobado en la Alineación A4 de 900 px de ancho).
+  // Devuelve el rectángulo ocupado (para detectar toques).
+  function draw(ctx, cx, cy, sc, o, onReady){
+    const ox = cx, oy = cy - 42*sc; // el (0,0) de la camiseta queda por encima del centro visual
+    const img = image(o, onReady);
+    if(img) ctx.drawImage(img, ox + VB.x*sc, oy + VB.y*sc, VB.w*sc, VB.h*sc);
+    return { x: ox - 114*sc, y: oy - 80*sc, w: 228*sc, h: 245*sc };
+  }
+
+  return { SHIRT, SHORTS, VB, loadFont, nameParts, defaultLines, resolveLines, lineInner, linesSvg, inner, svg, image, draw, textStyle, esc };
+})();
+Kit.loadFont();
+</script>
 </head>
 <body>
 
@@ -1091,7 +1262,7 @@
               <button class="btn download-btn-lineup" id="downloadLineupPdfBtn" style="width:auto; margin-top:16px; margin-left:8px; background:var(--navy);">⬇️ Descargar alineación (PDF)</button>
               <button class="btn secondary" id="resetPositionsBtn" style="width:auto; margin-top:16px; margin-left:8px;">↺ Restablecer posiciones</button>
             </div>
-            <p class="hint">Puedes arrastrar directamente a cada jugador sobre el campo (ratón o dedo) para ajustar su posición exacta.</p>
+            <p class="hint">Puedes arrastrar directamente a cada jugador sobre el campo (ratón o dedo) para ajustar su posición exacta. Haz doble clic sobre una camiseta para ajustar el tamaño y la posición del nombre.</p>
           </div>
         </div>
       </div>
@@ -2034,6 +2205,16 @@ const startersList = document.getElementById("startersList");
 const subsList = document.getElementById("subsList");
 const pitchCanvas = document.getElementById("pitchCanvas");
 const pitchCtx = pitchCanvas.getContext("2d");
+// Equipaciones en el campo: escalas aprobadas (0,40 titulares en Campo completo; 0,30 suplentes).
+const KIT_SCALE_FULL = 0.40, KIT_SCALE_SUB = 0.30, KIT_SCALE_MEDIO = 0.27;
+let lastSubKitRects = []; // rectángulos de las camisetas de suplentes dibujadas (para el doble clic)
+let kitRedrawPending = false;
+function scheduleKitRedraw(){
+  if(kitRedrawPending) return;
+  kitRedrawPending = true;
+  requestAnimationFrame(()=>{ kitRedrawPending = false; drawPitch(); });
+}
+Kit.loadFont().then(()=>{ try{ drawPitch(); }catch(e){} });
 const lineupNoPlayersMsg = document.getElementById("lineupNoPlayersMsg");
 const matchFecha = document.getElementById("matchFecha");
 const matchHora = document.getElementById("matchHora");
@@ -2410,7 +2591,8 @@ function pitchGeom(){
   // Campo completo: el hueco de suplentes crece o se encoge segun cuantos haya convocados,
   // para que el campo siga siendo lo mas grande posible con pocos suplentes.
   const subsCount = lineupSubs.filter(id=> !!id).length;
-  const SUBS_COLS = 5, SUBS_ROW_H = 42, SUBS_LABEL_H = 54;
+  // Suplentes con equipación: hasta 8 por fila, cada fila con altura para una camiseta (escala 0,30).
+  const SUBS_COLS = 8, SUBS_ROW_H = 96, SUBS_LABEL_H = 34;
   const subsRows = subsCount > 0 ? Math.ceil(subsCount / SUBS_COLS) : 0;
   const SUBS_AREA_H = subsCount > 0 ? (SUBS_LABEL_H + subsRows*SUBS_ROW_H + 16) : 0;
 
@@ -2458,6 +2640,7 @@ function drawPitch(){
   const lineColor = isVerde ? "rgba(255,255,255,0.9)" : "#1a4d8f";
   const nameColor = "#0a0a0a";
 
+  lastSubKitRects = [];
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0,0,W,H);
@@ -2484,6 +2667,12 @@ function drawPitch(){
   // ---- Campo ----
   ctx.fillStyle = fieldFill;
   ctx.fillRect(PITCH_LEFT, PITCH_TOP, PITCH_RIGHT-PITCH_LEFT, PITCH_BOTTOM-PITCH_TOP);
+  if(isVerde){
+    // Césped cortado a rayas (franjas horizontales alternas), como en un estadio.
+    const nStripes = 10, sh = (PITCH_BOTTOM-PITCH_TOP)/nStripes;
+    ctx.fillStyle = "rgba(0,0,0,0.07)";
+    for(let i=1; i<nStripes; i+=2){ ctx.fillRect(PITCH_LEFT, PITCH_TOP + i*sh, PITCH_RIGHT-PITCH_LEFT, sh); }
+  }
   ctx.strokeStyle = lineColor;
   ctx.lineWidth = 3;
   ctx.strokeRect(PITCH_LEFT, PITCH_TOP, PITCH_RIGHT-PITCH_LEFT, PITCH_BOTTOM-PITCH_TOP);
@@ -2548,27 +2737,12 @@ function drawPitch(){
     const cx = PITCH_LEFT + slot.x*fieldW;
     const cy = PITCH_TOP + y*fieldH;
     const player = players.find(p=> p.id === lineupStarters[idx]);
-    const radius = shape === "medio" ? fieldW*0.024 : fieldW*0.038;
-
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI*2);
-    ctx.fillStyle = slot.isGK ? "#e6a817" : "#185fa5";
-    ctx.fill();
-    ctx.lineWidth = radius*0.14;
-    ctx.strokeStyle = "#ffffff";
-    ctx.stroke();
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = `bold ${Math.round(radius*0.62)}px Arial`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(player ? (player.num || "") : "", cx, cy+1);
-
-    const label = (player ? displayAlias(player) : slot.label).toUpperCase();
-    ctx.fillStyle = nameColor;
-    ctx.font = `bold ${Math.round(radius*0.6)}px Arial`;
-    ctx.textBaseline = "alphabetic";
-    ctx.fillText(label, cx, cy+radius+ radius*0.75);
+    const sc = shape === "medio" ? KIT_SCALE_MEDIO : KIT_SCALE_FULL;
+    const kitName = player ? displayAlias(player) : (slot.label || "");
+    Kit.draw(ctx, cx, cy, sc, {
+      name: kitName, num: player ? (player.num || "") : "",
+      gk: !!slot.isGK, adj: player ? player.kit_name : null,
+    }, scheduleKitRedraw);
   });
 
   // ---- Suplentes: solo texto (sin círculos), en gris, en rejilla de hasta 5 columnas ----
@@ -2578,20 +2752,22 @@ function drawPitch(){
       ctx.fillStyle = "#c0392b";
       ctx.font = "bold 20px Arial";
       ctx.textAlign = "left";
-      ctx.fillText("SUPLENTES:", MARGIN+18, SUBS_TOP+20);
+      ctx.textBaseline = "alphabetic";
+      ctx.fillText("SUPLENTES:", MARGIN+18, SUBS_TOP+22);
 
-      const cols = geom.SUBS_COLS, rowH = geom.SUBS_ROW_H;
-      const colW = (W - 2*MARGIN - 36) / cols;
-      const startY = SUBS_TOP + 20 + rowH;
-      ctx.font = "bold 19px Arial";
-      ctx.fillStyle = "#8a8a8a";
+      const cols = Math.min(geom.SUBS_COLS, withSubs.length), rowH = geom.SUBS_ROW_H;
+      const colW = (W - 2*MARGIN) / geom.SUBS_COLS;
+      const rowsStartY = SUBS_TOP + 34;
       withSubs.forEach((id, i)=>{
         const player = players.find(p=> p.id === id);
         if(!player) return;
-        const col = i % cols, row = Math.floor(i/cols);
-        const x = MARGIN+18 + col*colW, y = startY + row*rowH;
-        const text = (player.num ? player.num+" " : "") + displayAlias(player);
-        ctx.fillText(text, x, y);
+        const row = Math.floor(i/geom.SUBS_COLS), col = i % geom.SUBS_COLS;
+        const inRow = Math.min(geom.SUBS_COLS, withSubs.length - row*geom.SUBS_COLS);
+        const rowLeft = W/2 - inRow*colW/2;
+        const x = rowLeft + col*colW + colW/2, y = rowsStartY + row*rowH + rowH/2;
+        const gk = (player.pos || "").toLowerCase().includes("porter");
+        const rect = Kit.draw(ctx, x, y, KIT_SCALE_SUB, { name: displayAlias(player), num: player.num || "", gk, adj: player.kit_name }, scheduleKitRedraw);
+        lastSubKitRects.push({ id, rect });
       });
     }
   }
@@ -2668,7 +2844,7 @@ function findNearestStarter(px, py){
   const { PITCH_TOP, PITCH_BOTTOM, PITCH_LEFT, PITCH_RIGHT } = pitchGeom();
   const playH = PITCH_BOTTOM - PITCH_TOP;
   const isMedio = pitchShapeSelect.value === "medio";
-  let best = -1, bestDist = 40; // radio de "agarre" en píxeles del canvas
+  let best = -1, bestDist = isMedio ? 34 : 50; // radio de "agarre" en píxeles del canvas (camiseta)
   starterPositions.forEach((slot, idx)=>{
     if(isMedio && slot.y > MEDIO_CUTOFF) return; // oculto en este modo, no se puede tocar
     const cx = PITCH_LEFT + slot.x*(PITCH_RIGHT-PITCH_LEFT);
@@ -2863,6 +3039,183 @@ function endDrag(evt){
 pitchCanvas.addEventListener("pointerup", endDrag);
 pitchCanvas.addEventListener("pointercancel", endDrag);
 pitchCanvas.addEventListener("pointerleave", endDrag);
+
+// ---------------- Editor del nombre en la camiseta (doble clic sobre una camiseta) ----------------
+// Cada línea del nombre es un recuadro: se mueve arrastrando desde dentro y se agranda o
+// reduce de forma proporcional tirando de una esquina. El ajuste se guarda en la ficha del
+// jugador (players.kit_name) y se aplica en todas las alineaciones.
+const kitEd = { player:null, gk:false, lines:null, sel:0, drag:null, saved:null };
+const KIT_SAFE = { x:-69, y:-74, w:138, h:162 };
+function kitEdEnsureDom(){
+  if(document.getElementById("kitEdOverlay")) return;
+  const ov = document.createElement("div");
+  ov.id = "kitEdOverlay";
+  ov.innerHTML = `
+  <style>
+    #kitEdOverlay{position:fixed;inset:0;background:rgba(10,15,30,.72);z-index:9999;display:none;align-items:center;justify-content:center;padding:12px}
+    #kitEdOverlay.open{display:flex}
+    #kitEdBox{background:#fff;border-radius:14px;width:min(920px,100%);max-height:100%;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:12px;font-family:inherit}
+    #kitEdTitle{font-weight:700;font-size:18px;color:#0d1b3e}
+    #kitEdHint{font-size:14px;color:#555;margin:0}
+    #kitEdGrid{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:14px}
+    @media(max-width:700px){#kitEdGrid{grid-template-columns:1fr}}
+    #kitEdSvg{width:100%;max-height:60vh;display:block;touch-action:none;border-radius:10px;background:#2f7a3c}
+    #kitEdPrev{display:block;border-radius:10px;background:#2f7a3c}
+    #kitEdBar{position:sticky;bottom:0;display:flex;gap:10px;align-items:center;justify-content:flex-end;padding:12px;background:#fff;border:1px solid #ddd;border-radius:12px}
+    #kitEdBar button{font-size:17px;padding:12px 22px;border-radius:8px;border:1px solid #ccc;background:#fff;cursor:pointer;font-weight:600}
+    #kitEdBar button.pri{background:#E8641E;border-color:#E8641E;color:#fff}
+    #kitEdToast{font-size:15px;font-weight:700;color:#E8641E;margin-right:auto}
+    #kitEdOverlay .kbox{fill:transparent;stroke:#fff;stroke-width:1.2;stroke-dasharray:4 3;cursor:move}
+    #kitEdOverlay .kbox.sel{stroke:#E8641E;stroke-width:1.6}
+    #kitEdOverlay .kh{fill:#fff;stroke:#E8641E;stroke-width:2;cursor:nwse-resize}
+    #kitEdOverlay .kh.tr,#kitEdOverlay .kh.bl{cursor:nesw-resize}
+  </style>
+  <div id="kitEdBox">
+    <div id="kitEdTitle"></div>
+    <p id="kitEdHint">Arrastra desde dentro de un recuadro para moverlo. Tira de una esquina para agrandar o reducir.</p>
+    <div id="kitEdGrid">
+      <svg id="kitEdSvg" viewBox="-140 -100 280 280" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div><p id="kitEdHint2" style="font-size:13px;color:#555;margin:0 0 6px">Tamaño real en la alineación</p>
+        <svg id="kitEdPrev" viewBox="-130 -100 260 290" width="120" height="134"></svg></div>
+    </div>
+    <div id="kitEdBar"><span id="kitEdToast"></span>
+      <button id="kitEdReset">Restablecer</button><button id="kitEdCancel">Cancelar</button><button id="kitEdSave" class="pri">Guardar</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  const svg = document.getElementById("kitEdSvg");
+  svg.addEventListener("pointermove", kitEdMove);
+  svg.addEventListener("pointerup", ()=>{ kitEd.drag = null; });
+  svg.addEventListener("pointercancel", ()=>{ kitEd.drag = null; });
+  document.getElementById("kitEdReset").onclick = ()=>{ kitEdLoad(null); kitEdToast("Tamaño estándar"); };
+  document.getElementById("kitEdCancel").onclick = ()=>{ ov.classList.remove("open"); };
+  document.getElementById("kitEdSave").onclick = kitEdSave;
+  ov.addEventListener("pointerdown", (e)=>{ if(e.target === ov) ov.classList.remove("open"); });
+}
+function kitEdToast(t){ const el = document.getElementById("kitEdToast"); el.textContent = t; setTimeout(()=>{ if(el.textContent === t) el.textContent = ""; }, 2200); }
+function kitEdName(){ return displayAlias(kitEd.player).toUpperCase().trim(); }
+function kitEdBuildStatic(){
+  const svg = document.getElementById("kitEdSvg");
+  svg.innerHTML = Kit.inner({ uid:"ed", name:"", num:kitEd.player.num || "", gk:kitEd.gk, noNames:true, noShadow:true })
+    + '<g id="kitEdNames" clip-path="url(#csed)"></g><g id="kitEdOv"></g>';
+  const g = document.getElementById("kitEdNames");
+  kitEd.lines.forEach(l=>{
+    const lg = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    lg.innerHTML = Kit.lineInner(l, kitEd.gk, "ed");
+    g.appendChild(lg);
+    l.g = lg;
+    l.lb = lg.firstChild.getBBox();
+  });
+}
+function kitEdLoad(adj){
+  kitEd.lines = Kit.resolveLines(kitEdName(), adj);
+  kitEd.sel = 0;
+  kitEdBuildStatic();
+  kitEdRender();
+}
+function kitEdBox(l){ return { x:l.cx + l.s*l.lb.x, y:l.by + l.s*l.lb.y, w:l.s*l.lb.width, h:l.s*l.lb.height }; }
+function kitEdClamp(l){
+  l.s = Math.max(0.35, Math.min(l.s, KIT_SAFE.w/l.lb.width, KIT_SAFE.h/l.lb.height));
+  let b = kitEdBox(l);
+  if(b.x < KIT_SAFE.x) l.cx += KIT_SAFE.x - b.x;
+  if(b.x + b.w > KIT_SAFE.x + KIT_SAFE.w) l.cx -= b.x + b.w - KIT_SAFE.x - KIT_SAFE.w;
+  b = kitEdBox(l);
+  if(b.y < KIT_SAFE.y) l.by += KIT_SAFE.y - b.y;
+  if(b.y + b.h > KIT_SAFE.y + KIT_SAFE.h) l.by -= b.y + b.h - KIT_SAFE.y - KIT_SAFE.h;
+}
+function kitEdAdj(){
+  return { t: kitEdName(), lines: kitEd.lines.map(l=> ({ cx: Math.round(l.cx*10)/10, by: Math.round(l.by*10)/10, s: Math.round(l.s*1000)/1000 })) };
+}
+function kitEdRender(){
+  const NS = "http://www.w3.org/2000/svg";
+  kitEd.lines.forEach(l=> l.g.setAttribute("transform", `translate(${l.cx},${l.by}) scale(${l.s})`));
+  const ov = document.getElementById("kitEdOv");
+  ov.innerHTML = "";
+  kitEd.lines.forEach((l, i)=>{
+    const b = kitEdBox(l), p = 2;
+    const r = document.createElementNS(NS, "rect");
+    r.setAttribute("x", b.x-p); r.setAttribute("y", b.y-p); r.setAttribute("width", b.w+2*p); r.setAttribute("height", b.h+2*p);
+    r.setAttribute("class", "kbox" + (i === kitEd.sel ? " sel" : ""));
+    r.addEventListener("pointerdown", e=> kitEdStart(e, i, -1));
+    ov.appendChild(r);
+    if(i === kitEd.sel){
+      [[b.x-p,b.y-p,"tl"],[b.x+b.w+p,b.y-p,"tr"],[b.x+b.w+p,b.y+b.h+p,"br"],[b.x-p,b.y+b.h+p,"bl"]].forEach((c, ci)=>{
+        const hd = document.createElementNS(NS, "circle");
+        hd.setAttribute("cx", c[0]); hd.setAttribute("cy", c[1]); hd.setAttribute("r", 5.5); hd.setAttribute("class", "kh " + c[2]);
+        hd.addEventListener("pointerdown", e=> kitEdStart(e, i, ci));
+        ov.appendChild(hd);
+      });
+    }
+  });
+  // Vista previa a tamaño real (la misma escala que en la alineación)
+  const prev = document.getElementById("kitEdPrev");
+  const realW = 260 * KIT_SCALE_FULL * (pitchCanvas.getBoundingClientRect().width / pitchCanvas.width || 1);
+  prev.setAttribute("width", Math.max(60, Math.round(realW)));
+  prev.setAttribute("height", Math.max(67, Math.round(realW*290/260)));
+  prev.innerHTML = Kit.inner({ uid:"pv", name:kitEdName(), num:kitEd.player.num || "", gk:kitEd.gk, lines:kitEd.lines });
+}
+function kitEdPt(e){
+  const svg = document.getElementById("kitEdSvg");
+  const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+function kitEdStart(e, i, corner){
+  e.preventDefault(); e.stopPropagation();
+  kitEd.sel = i;
+  const l = kitEd.lines[i], b = kitEdBox(l), p = kitEdPt(e);
+  const opp = [[b.x+b.w, b.y+b.h], [b.x, b.y+b.h], [b.x, b.y], [b.x+b.w, b.y]];
+  kitEd.drag = { i, corner, p0:p, cx0:l.cx, by0:l.by, O: opp[corner < 0 ? 0 : corner] };
+  try{ document.getElementById("kitEdSvg").setPointerCapture(e.pointerId); }catch(err){}
+  kitEdRender();
+}
+function kitEdMove(e){
+  const d = kitEd.drag; if(!d) return;
+  const l = kitEd.lines[d.i], p = kitEdPt(e);
+  if(d.corner < 0){
+    l.cx = d.cx0 + p.x - d.p0.x; l.by = d.by0 + p.y - d.p0.y;
+  } else {
+    const O = d.O;
+    const s = Math.max(Math.abs(p.x-O[0]) / l.lb.width, Math.abs(p.y-O[1]) / l.lb.height);
+    l.s = Math.max(0.35, Math.min(s, KIT_SAFE.w/l.lb.width, KIT_SAFE.h/l.lb.height));
+    const right = d.corner === 1 || d.corner === 2, bottom = d.corner === 2 || d.corner === 3;
+    const x0 = right ? O[0] : O[0] - l.s*l.lb.width, y0 = bottom ? O[1] : O[1] - l.s*l.lb.height;
+    l.cx = x0 - l.s*l.lb.x; l.by = y0 - l.s*l.lb.y;
+  }
+  kitEdClamp(l);
+  kitEdRender();
+}
+async function kitEdSave(){
+  const p = kitEd.player;
+  const adj = kitEdAdj();
+  const { error } = await supabase.from("players").update({ kit_name: adj }).eq("id", p.id);
+  if(error){ kitEdToast("No se ha podido guardar: " + error.message); return; }
+  p.kit_name = adj;
+  kitEdToast("Guardado en la ficha del jugador");
+  drawPitch();
+  setTimeout(()=>{ document.getElementById("kitEdOverlay").classList.remove("open"); }, 700);
+}
+async function openKitEditor(player, gk){
+  kitEdEnsureDom();
+  await Kit.loadFont();
+  kitEd.player = player; kitEd.gk = !!gk;
+  document.getElementById("kitEdTitle").textContent = "Nombre en la camiseta · " + (player.num ? player.num + " · " : "") + displayAlias(player);
+  document.getElementById("kitEdOverlay").classList.add("open");
+  kitEdLoad(player.kit_name || null);
+}
+pitchCanvas.addEventListener("dblclick", (evt)=>{
+  if(pitchShapeSelect.value === "medio" && abpDrawMode) return;
+  const pos = canvasPosFromEvent(evt);
+  const idx = findNearestStarter(pos.x, pos.y);
+  if(idx >= 0){
+    const player = players.find(p=> p.id === lineupStarters[idx]);
+    if(player){ openKitEditor(player, !!starterPositions[idx].isGK); }
+    return;
+  }
+  const hit = lastSubKitRects.find(s=> pos.x >= s.rect.x && pos.x <= s.rect.x + s.rect.w && pos.y >= s.rect.y && pos.y <= s.rect.y + s.rect.h);
+  if(hit){
+    const player = players.find(p=> p.id === hit.id);
+    if(player){ openKitEditor(player, (player.pos || "").toLowerCase().includes("porter")); }
+  }
+});
 
 document.getElementById("downloadLineupBtn").addEventListener("click", ()=>{
   const link = document.createElement("a");
