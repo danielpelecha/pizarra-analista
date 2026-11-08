@@ -540,6 +540,50 @@
   .lv-bench-grip{ position:absolute; right:3px; bottom:3px; width:22px; height:22px; cursor:nwse-resize; touch-action:none; border-right:3px solid #fff; border-bottom:3px solid #fff; border-radius:0 0 6px 0; opacity:.85; }
   .lv-bench-hint{ font-size:12px; color:var(--grey); }
   .lv-cambio-bar{ background:#2E9E4F; color:#fff; border-radius:10px; padding:10px 14px; font-weight:bold; font-size:15px; }
+
+  /* ---- Partido en vivo en UNA sola pantalla (ordenador / tablet en horizontal) ----
+     Marcador + reloj + botones en una franja; campo con banquillo, acciones y registro en
+     tres columnas que ocupan exactamente el alto que queda de pantalla (--lv-full-h, lo
+     calcula fitLiveToScreen). Las camisetas mantienen su tamaño (15% del ancho del campo). */
+  .lv-topbar{ display:none; }
+  @media (orientation: landscape) and (min-width: 1000px){
+    .live-section.lv-compact{ display:flex; flex-direction:column; gap:8px; height:var(--lv-full-h, auto); padding:8px 10px; margin-top:8px; }
+    .live-section.lv-compact > *{ flex:0 0 auto; }
+    .live-section.lv-compact .lv-topbar{
+      display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:14px;
+      background:var(--navy); border:none; border-radius:12px; padding:8px 14px; margin:0;
+    }
+    .live-section.lv-compact .lv-topbar .match-dashboard{ background:transparent; padding:0; margin:0; }
+    .live-section.lv-compact .lv-topbar .score-minute{ display:none; }
+    .live-section.lv-compact .lv-topbar .kpi-pill-row{ margin-top:4px; }
+    .live-section.lv-compact .lv-topbar .time{ color:#fff; font-size:34px; line-height:1; }
+    .live-section.lv-compact .lv-topbar .lv-half-lbl{ color:#9fb3d1 !important; }
+    .live-section.lv-compact .lv-topbar #parcialHalf2{ color:#7cc4ff !important; }
+    .live-section.lv-compact .lv-topbar .live-btn{ padding:9px 12px; font-size:14px; white-space:nowrap; }
+    .live-section.lv-compact .lv-topbar .lv-btns{ flex-wrap:nowrap !important; }
+    .live-section.lv-compact .live-main-grid{
+      flex:1 1 auto; min-height:0; display:grid; align-items:stretch; gap:14px;
+      grid-template-columns: minmax(0, min(650px, 36vw)) minmax(0,1fr) minmax(275px, 22vw);
+    }
+    .live-section.lv-compact .live-players-col{ display:flex; flex-direction:column; min-height:0; }
+    .live-section.lv-compact .lv-head{ margin-top:0; }
+    .live-section.lv-compact .lv-pitch{ aspect-ratio:auto; flex:1 1 auto; min-height:0; margin:4px 0 2px; }
+    .live-section.lv-compact .lv-bench{ flex:0 0 auto; padding:2px 26px 6px 10px; margin-top:2px; }
+    .live-section.lv-compact .live-actions-col{ position:static; overflow-y:auto; min-height:0; }
+    .live-section.lv-compact .live-feed-col{ position:static; max-height:none; min-height:0; height:100%; overflow-y:auto; }
+    .live-section.lv-compact .live-actions-col .cambio-queue-panel{ margin:0 0 8px; padding:8px 10px; }
+    .live-section.lv-compact .live-actions-col .lv-cambio-bar{ font-size:14px; padding:8px 10px; }
+    .live-section.lv-compact .live-actions-col > div:first-child .live-btn{ padding:7px 10px; font-size:13px; }
+  }
+  @media (orientation: landscape) and (min-width: 1000px) and (max-width: 1400px){
+    .live-section.lv-compact .lv-topbar{ gap:8px; padding:6px 10px; }
+    .live-section.lv-compact .lv-topbar .time{ font-size:26px; }
+    .live-section.lv-compact .lv-topbar .team-name{ font-size:13px; max-width:150px; }
+    .live-section.lv-compact .lv-topbar .score{ font-size:20px; }
+    .live-section.lv-compact .lv-topbar .scoreboard-row{ gap:8px; flex-wrap:nowrap; }
+    .live-section.lv-compact .lv-topbar .kpi-pill{ font-size:11px; padding:2px 6px; }
+    .live-section.lv-compact .lv-topbar .live-btn{ padding:7px 8px; font-size:12px; }
+  }
   .live-main-grid{ display:block; }
   @media (orientation: landscape) and (min-width: 640px){
     .live-main-grid{ display:grid; grid-template-columns: 1.6fr 1.4fr; gap:14px; align-items:start; }
@@ -4201,11 +4245,13 @@ function computeLiveSlots(match, onPitch){
   return slot;
 }
 function isGkPlayer(p){ return (p.pos || "").toLowerCase().includes("porter"); }
+function livePitchGeom(){ return liveCompactActive() ? { H:760, y0:16, ph:728 } : { H:1060, y0:20, ph:1020 }; }
 function livePitchBgSvg(){
-  const W = 900, H = 1060, x0 = 30, y0 = 20, pw = 840, ph = 1020, cx = W/2, my = y0 + ph/2;
+  const g = livePitchGeom();
+  const W = 900, H = g.H, x0 = 30, y0 = g.y0, pw = 840, ph = g.ph, cx = W/2, my = y0 + ph/2;
   const bw = pw*0.59, bh = ph*0.16, sw = pw*0.27, sh = ph*0.055;
   let s = `<svg class="lv-bg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><rect width="${W}" height="${H}" fill="#336b16"/>`;
-  for(let i=0; i<10; i++){ if(i%2) s += `<rect x="0" y="${i*106}" width="${W}" height="106" fill="#3d7a1c"/>`; }
+  for(let i=0; i<10; i++){ if(i%2) s += `<rect x="0" y="${i*H/10}" width="${W}" height="${H/10}" fill="#3d7a1c"/>`; }
   s += `<g fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="3"><rect x="${x0}" y="${y0}" width="${pw}" height="${ph}"/><line x1="${x0}" y1="${my}" x2="${x0+pw}" y2="${my}"/><circle cx="${cx}" cy="${my}" r="${pw*0.12}"/>`
     + `<rect x="${cx-bw/2}" y="${y0}" width="${bw}" height="${bh}"/><rect x="${cx-sw/2}" y="${y0}" width="${sw}" height="${sh}"/>`
     + `<rect x="${cx-bw/2}" y="${y0+ph-bh}" width="${bw}" height="${bh}"/><rect x="${cx-sw/2}" y="${y0+ph-sh}" width="${sw}" height="${sh}"/></g>`
@@ -4272,7 +4318,8 @@ function buildLivePlayersCol(match){
     if(queuedOut) cls += " dim";
     div.className = cls;
     div.style.left = (30 + s.x*840) / 900 * 100 + "%";
-    div.style.top = (20 + s.y*1020) / 1060 * 100 + "%";
+    const pg = livePitchGeom();
+    div.style.top = (pg.y0 + s.y*pg.ph) / pg.H * 100 + "%";
     const gk = s.gk || isGkPlayer(p);
     div.innerHTML = liveKitSvg(p, gk, "lv" + (k++)) + liveBadgesHtml(match, p.id, true) + (showMin ? liveMinutesHtml(mins[p.id]) : "");
     div.title = (p.num ? p.num + " · " : "") + displayAlias(p);
@@ -4817,6 +4864,26 @@ function renderMatchDashboard(match){
   return wrap;
 }
 
+
+// Ajusta el bloque del partido en vivo al alto exacto que queda de pantalla bajo la cabecera.
+let liveScrolledForMatch = null;
+function liveCompactActive(){
+  return window.matchMedia("(orientation: landscape) and (min-width: 1000px)").matches;
+}
+function fitLiveToScreen(){
+  if(!liveSection || !liveSection.classList.contains("lv-compact")) return;
+  const bar = document.getElementById("appTopBar");
+  const top = bar ? bar.getBoundingClientRect().height : 0;
+  liveSection.style.setProperty("--lv-full-h", Math.max(520, window.innerHeight - top - 12) + "px");
+}
+window.addEventListener("resize", ()=>{ fitLiveToScreen(); if(currentMatch && currentMatch.live && currentMatch.live.started && !currentMatch.live.finished && !liveEditingOpen){ refreshLivePlayersCol(currentMatch); } });
+function scrollLiveIntoView(){
+  const bar = document.getElementById("appTopBar");
+  const top = bar ? bar.getBoundingClientRect().height : 0;
+  const y = liveSection.getBoundingClientRect().top + window.scrollY - top - 4;
+  window.scrollTo({ top: Math.max(0, y), behavior: "auto" });
+}
+
 function renderLive(match){
   if(!liveSection) return;
   ensureLive(match);
@@ -4949,6 +5016,17 @@ function renderLive(match){
   }
 
   clockRow.appendChild(btnsWrap);
+  // En pantalla ancha (horizontal) y con el partido en juego: marcador, reloj y botones en una
+  // sola franja, y el resto ajustado al alto de la pantalla para verlo todo sin desplazarse.
+  const compact = !match.live.finished && liveCompactActive();
+  liveSection.classList.toggle("lv-compact", compact);
+  if(compact){
+    const dash = liveSection.querySelector(".match-dashboard");
+    clockRow.classList.add("lv-topbar");
+    btnsWrap.classList.add("lv-btns");
+    const lbl = timeWrap.firstElementChild; if(lbl) lbl.classList.add("lv-half-lbl");
+    if(dash){ clockRow.insertBefore(dash, btnsWrap); }
+  }
   liveSection.appendChild(clockRow);
 
   if(!match.live.finished){
@@ -4963,7 +5041,7 @@ function renderLive(match){
       : liveCambioQueue.length > 0
       ? "Toca a otro jugador en 'En el campo' para añadir otro cambio a la cola, o confirma los que ya tienes"
       : "Toca la camiseta de un jugador en el campo y después la acción, o pulsa 'Cambio' para una sustitución";
-    hintRow.appendChild(hint);
+    if(!compact || liveCambioOut || liveCambioQueue.length > 0) hintRow.appendChild(hint);
     if(liveCambioOut){
       const cancelBtn = document.createElement("button");
       cancelBtn.className = "live-btn grey";
@@ -4971,7 +5049,7 @@ function renderLive(match){
       cancelBtn.addEventListener("click", ()=>{ liveCambioOut = null; liveEditingOpen = liveCambioQueue.length > 0; renderLive(match); });
       hintRow.appendChild(cancelBtn);
     }
-    liveSection.appendChild(hintRow);
+    if(hintRow.children.length) liveSection.appendChild(hintRow);
 
     if(liveCambioQueue.length > 0){
       const queuePanel = document.createElement("div");
@@ -5036,6 +5114,14 @@ function renderLive(match){
     selPill.className = "selected-player-pill";
     selPill.textContent = selPlayer ? `▶ ${selPlayer.num ? selPlayer.num + " " : ""}${displayAlias(selPlayer)}` : "Ningún jugador seleccionado";
     actionsCol.appendChild(selPill);
+    // En pantalla única, la barra del cambio y la cola de cambios van en esta columna, para
+    // no quitarle altura al campo.
+    if(compact){
+      const qp = liveSection.querySelector(":scope > .cambio-queue-panel");
+      if(qp) actionsCol.insertBefore(qp, selPill);
+      if(hintRow.parentNode === liveSection) actionsCol.insertBefore(hintRow, qp || selPill);
+      if(liveCambioOut) selPill.style.display = "none";
+    }
 
     // Un botón por cada estadística (excepto "minutos", que no es tocable), agrupadas visualmente
     // en "Nuestro equipo" (grupo positiva) y "Rival y negativo" (grupo negativa), según lo configurado
@@ -5230,6 +5316,10 @@ function renderLive(match){
   } else {
     feedWrap.className = "live-feed-col";
     liveMainGridRef.appendChild(feedWrap);
+  }
+  if(liveSection.classList.contains("lv-compact")){
+    fitLiveToScreen();
+    if(liveScrolledForMatch !== match.id){ liveScrolledForMatch = match.id; requestAnimationFrame(scrollLiveIntoView); }
   }
 }
 
