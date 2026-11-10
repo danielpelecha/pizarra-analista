@@ -258,6 +258,63 @@
   }
   .empty-roster{ color:var(--grey); font-size:15px; padding:14px 0; }
 
+
+  /* ---- Alineación: barra de sistemas + ventana flotante para asignar (estilo FFCV) ---- */
+  .lineup-controls{ display:none; }
+  .lineup-pitch-col{ flex:1 1 100%; }
+  .sys-bar{ background:var(--navy); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:10px; margin-bottom:12px; text-align:left; }
+  .sys-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .sys-t{ color:#fff; font-weight:800; font-size:14px; letter-spacing:.3px; margin-right:4px; }
+  .sys-btn{ border:1.5px solid #3a4c78; background:#16285a; color:#fff; border-radius:9px; padding:8px 14px; font-weight:800; font-size:15px; cursor:pointer; }
+  .sys-btn.on{ background:#E8641E; border-color:#E8641E; }
+  .sys-fav{ background:transparent; border:1.5px solid #3a4c78; color:#ffd166; border-radius:9px; padding:7px 12px; font-weight:800; cursor:pointer; font-size:13px; }
+  .sys-bar select{ width:auto; margin:0; padding:7px 10px; border-radius:9px; border:1.5px solid #3a4c78; background:#16285a; color:#fff; font-weight:700; font-size:14px; }
+  .sys-bar select.on{ background:#E8641E; border-color:#E8641E; }
+  .sys-cnt{ background:#16285a; color:#cfe0ff; border:1px solid #3a4c78; border-radius:999px; padding:4px 12px; font-weight:700; font-size:13px; }
+  .sys-cnt.ok{ color:#9ff0b8; border-color:#2E9E4F; } .sys-cnt.warn{ color:#ffd166; border-color:#E8A317; }
+  .sys-lbl{ color:#9fb3d1; font-size:12px; font-weight:700; }
+  .pitch-stage{ position:relative; max-width:720px; margin:0 auto; }
+  .lp-pop{ position:absolute; width:310px; background:#fff; border-radius:14px; box-shadow:0 18px 50px rgba(13,27,62,.35),0 2px 8px rgba(13,27,62,.2); z-index:200; overflow:hidden; border:1px solid #c9d1e0; text-align:left; }
+  .lp-pop .ph{ background:var(--navy); color:#fff; padding:10px 12px; display:flex; align-items:center; gap:8px; }
+  .lp-pop .cd{ background:#E8641E; border-radius:6px; padding:2px 8px; font-weight:800; font-size:14px; }
+  .lp-pop .tt{ font-weight:800; font-size:15px; flex:1; }
+  .lp-pop .cl{ background:transparent; border:none; color:#cfe0ff; font-size:20px; cursor:pointer; line-height:1; padding:0 4px; width:auto; margin:0; }
+  .lp-pop .sr{ padding:8px 10px; border-bottom:1px solid #e5e9f2; }
+  .lp-pop .sr input{ width:100%; border:1.5px solid #c9d1e0; border-radius:8px; padding:8px 10px; font-size:15px; outline:none; margin:0; }
+  .lp-pop .sr input:focus{ border-color:#E8641E; }
+  .lp-pop .ls{ max-height:270px; overflow-y:auto; padding:4px 0; }
+  .lp-pop .gh{ font-size:11px; font-weight:800; color:#6b7280; letter-spacing:.5px; padding:6px 12px 2px; }
+  .lp-pop .gh.g{ color:#2E9E4F; }
+  .lp-pop .it{ display:flex; align-items:center; gap:10px; padding:7px 12px; cursor:pointer; }
+  .lp-pop .it:hover{ background:#fff3ea; }
+  .lp-pop .it .n{ background:var(--navy); color:#fff; border-radius:6px; min-width:30px; text-align:center; padding:3px 4px; font-size:13px; font-weight:800; }
+  .lp-pop .it .nm{ font-weight:800; font-size:15px; color:var(--navy); line-height:1.1; }
+  .lp-pop .it .pp{ font-size:11.5px; color:#7a8396; font-weight:600; }
+  .lp-pop .it .tg{ margin-left:auto; font-size:10.5px; font-weight:800; border-radius:5px; padding:2px 6px; }
+  .lp-pop .it .tg.r{ background:#e9f7ee; color:#1e7a3c; } .lp-pop .it .tg.s{ background:#eef2fb; color:#1f5fe0; }
+  .lp-pop .it input{ width:18px; height:18px; accent-color:#2E9E4F; margin:0; }
+  .lp-pop .ft{ display:flex; gap:6px; padding:8px 10px; border-top:1px solid #e5e9f2; background:#f8f9fc; }
+  .lp-pop .ft button{ flex:1; border:none; border-radius:8px; padding:9px; font-size:14px; font-weight:800; cursor:pointer; color:#fff; margin:0; }
+  .lp-pop .mn button{ display:flex; align-items:center; gap:10px; width:100%; border:none; background:#fff; padding:12px 14px; font-size:15px; font-weight:700; color:var(--navy); cursor:pointer; text-align:left; border-bottom:1px solid #eef1f6; margin:0; border-radius:0; }
+  .lp-pop .mn button:hover{ background:#fff3ea; } .lp-pop .mn button.d{ color:#c81e1e; }
+  .lp-pop .empty{ padding:14px; color:#7a8396; font-size:14px; text-align:center; }
+
+  /* ---- Minutos por posición (informe, ficha de jugador, equipo) ---- */
+  .pos-chip{ display:inline-block; border-radius:6px; padding:2px 7px; margin:1px 2px; font-size:12px; font-weight:800; background:#eef2fb; color:var(--navy); white-space:nowrap; }
+  .pos-chip.main{ background:var(--navy); color:#fff; }
+  .pos-bars{ display:flex; flex-direction:column; gap:6px; margin:8px 0 16px; }
+  .pos-bar-row{ display:grid; grid-template-columns:150px 1fr 110px; gap:10px; align-items:center; font-size:14px; }
+  .pos-bar-row .lb{ font-weight:800; color:var(--navy); }
+  .pos-bar-row .lb small{ display:block; font-size:11px; color:var(--grey); font-weight:600; }
+  .pos-bar-track{ background:#eef1f6; border-radius:6px; height:18px; overflow:hidden; }
+  .pos-bar-fill{ background:#1f5fe0; height:100%; border-radius:6px; }
+  .pos-bar-row.main .pos-bar-fill{ background:#E8641E; }
+  .pos-bar-row .vl{ font-weight:700; color:#333; text-align:right; }
+  .ficha-kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin:6px 0 12px; }
+  .ficha-kpi{ background:var(--lightblue); border-radius:10px; padding:10px 12px; }
+  .ficha-kpi .k{ font-size:12px; color:var(--grey); font-weight:700; } .ficha-kpi .v{ font-size:22px; font-weight:800; color:var(--navy); }
+  .pos-table td.name-td{ cursor:pointer; color:var(--navy); font-weight:700; text-decoration:underline dotted; }
+  @media(max-width:600px){ .pos-bar-row{ grid-template-columns:90px 1fr 80px; } }
   /* ---- Alineación ---- */
   .lineup-wrap{
     display:flex;
@@ -511,6 +568,27 @@
   }
   /* ---- Layout apaisado (movil girado, tablet, ordenador) ---- */
 
+
+  .lv-move-btn{ border:none; border-radius:8px; padding:6px 12px; font-weight:bold; font-size:13px; cursor:pointer; background:#e5e7eb; color:#111; margin-right:6px; }
+  .lv-move-btn.on{ background:#E8641E; color:#fff; }
+  .lv-pitch.moving .lv-player{ cursor:grab; touch-action:none; }
+  .lv-player.dragging{ z-index:60; cursor:grabbing; }
+  .lv-player.act svg.lv-kit{ filter:drop-shadow(0 0 5px #E8641E) drop-shadow(0 0 5px #E8641E); }
+  .lv-player.target svg.lv-kit{ filter:drop-shadow(0 0 6px #2E9E4F) drop-shadow(0 0 6px #2E9E4F); }
+  .lv-pos{ position:absolute; left:50%; transform:translateX(-50%); top:72%; background:var(--navy); color:#fff; font-size:12px; font-weight:800; border-radius:6px; padding:1px 7px; white-space:nowrap; border:1.5px solid #fff; pointer-events:none; z-index:5; }
+  .lv-ghost{ position:absolute; width:15%; aspect-ratio:260/290; transform:translate(-50%,-38%); border:3px dashed #fff; border-radius:14px; opacity:.8; pointer-events:none; }
+  .mv-bar{ background:#E8641E; color:#fff; border-radius:10px; padding:9px 12px; font-weight:bold; font-size:14px; display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .mv-bar button{ border:none; background:#fff; color:#E8641E; border-radius:7px; padding:6px 12px; font-weight:800; cursor:pointer; white-space:nowrap; width:auto; margin:0; }
+  .mv-info{ background:#fff; border:1px solid var(--border); border-radius:10px; padding:12px; font-size:15px; color:#333; line-height:1.5; }
+  .mv-panel{ background:#fff; border:3px solid #E8641E; border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+  .mv-panel h4{ margin:0; color:var(--navy); font-size:17px; } .mv-panel p{ margin:0; font-size:13px; color:#555; }
+  .mv-grp{ font-size:12px; font-weight:800; color:var(--navy); margin-top:4px; }
+  .mv-opts{ display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
+  .mv-opts button{ border:1.5px solid #c9d1e0; border-radius:8px; padding:6px 4px; font-weight:800; font-size:13.5px; color:var(--navy); background:#f6f8fc; cursor:pointer; margin:0; width:auto; line-height:1.15; }
+  .mv-opts button small{ display:block; font-size:10.5px; font-weight:700; opacity:.7; }
+  .mv-opts button.cur{ background:#1f5fe0; color:#fff; border-color:#1f5fe0; }
+  .mv-opts button.sug{ border:3px solid #2E9E4F; background:#e9f7ee; }
+  .mv-foot{ display:flex; gap:6px; margin-top:4px; } .mv-foot button{ flex:1; border:none; border-radius:8px; padding:10px; font-size:14px; font-weight:800; cursor:pointer; color:#fff; margin:0; }
   /* ---- Pantalla del partido: alineación en el campo con camisetas ---- */
   .lv-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px; }
   .lv-head .lv-title{ font-weight:bold; color:var(--navy); }
@@ -1149,7 +1227,7 @@ Kit.loadFont();
       <button class="tab-btn" data-tab="plantilla">👥 Plantilla</button>
       <button class="tab-btn soon" data-tab="alineacion">📋 Alineación</button>
       <button class="tab-btn" data-tab="partidos">⚽ Partidos</button>
-      <button class="tab-btn soon" data-tab="ficha">🪪 Ficha de jugador</button>
+      <button class="tab-btn" data-tab="ficha">🪪 Ficha de jugador</button>
       <button class="tab-btn soon" data-tab="equipo">📊 Equipo</button>
     </div>
 
@@ -1322,6 +1400,13 @@ Kit.loadFont();
           </div>
 
           <div class="lineup-pitch-col">
+            <div class="sys-bar" id="sysBar">
+              <div class="sys-row"><span class="sys-t">SISTEMAS TÁCTICOS:</span><span class="sys-row" id="sysBtns"></span>
+                <select id="sysAbpSelect" title="Jugadas a balón parado"></select>
+                <button class="sys-fav" id="sysFavBtn" type="button">☆ Marcar favorito</button></div>
+              <div class="sys-row" id="sysCounters"></div>
+              <div class="sys-row" id="sysFieldOpts"></div>
+            </div>
             <div id="abpDrawTools" class="abp-draw-tools hidden">
               <button class="abp-tool-btn" id="abpBallBtn">⚽ Balón</button>
               <button class="abp-tool-btn" id="abpDrawBtn">✏️ Dibujar línea</button>
@@ -1332,13 +1417,17 @@ Kit.loadFont();
               <button class="abp-tool-btn" id="abpDashBtn">┄ Discontinua</button>
               <button class="abp-tool-btn danger" id="abpClearLinesBtn">🗑 Borrar líneas</button>
             </div>
-            <canvas id="pitchCanvas" width="900" height="1273"></canvas>
+            <div class="pitch-stage" id="pitchStage">
+              <canvas id="pitchCanvas" width="900" height="1273"></canvas>
+              <div id="lineupPop"></div>
+            </div>
             <div>
               <button class="btn download-btn-lineup" id="downloadLineupBtn" style="width:auto; margin-top:16px;">⬇️ Descargar alineación (PNG)</button>
               <button class="btn download-btn-lineup" id="downloadLineupPdfBtn" style="width:auto; margin-top:16px; margin-left:8px; background:var(--navy);">⬇️ Descargar alineación (PDF)</button>
               <button class="btn secondary" id="resetPositionsBtn" style="width:auto; margin-top:16px; margin-left:8px;">↺ Restablecer posiciones</button>
+              <button class="btn" id="addSubsBtn" style="width:auto; margin-top:16px; margin-left:8px; background:#E8641E;">+ Añadir suplentes</button>
             </div>
-            <p class="hint">Puedes arrastrar directamente a cada jugador sobre el campo (ratón o dedo) para ajustar su posición exacta. Haz doble clic sobre una camiseta para ajustar el tamaño y la posición del nombre. En Medio campo, toca una camiseta y tira de una de sus esquinas para agrandarla o reducirla.</p>
+            <p class="hint">Pulsa un hueco con <b>+ Asignar</b> para elegir jugador, o una camiseta para cambiarla, quitarla o editar su nombre. Arrastra una camiseta encima de otra para intercambiarlas; si la sueltas en otro sitio, ajustas su posición exacta. Las abreviaturas de los puestos solo se ven aquí, no en la descarga. En Medio campo, toca una camiseta y tira de una de sus esquinas para agrandarla o reducirla.</p>
           </div>
         </div>
       </div>
@@ -1390,7 +1479,12 @@ Kit.loadFont();
     </div>
     <div class="tab-panel hidden" id="tabPanelFicha">
       <div class="card wide"><h1 style="text-align:left;">Ficha de jugador</h1>
-      <p class="hint">Próximamente: histórico individual de cada jugador.</p></div>
+        <p class="hint">Minutos de cada jugador en cada posición, sumando todos los partidos registrados en directo. Próximamente: evaluaciones e informe individual.</p>
+        <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:12px;">
+          <div style="min-width:260px;"><label for="fichaPlayerSelect">Jugador</label><select id="fichaPlayerSelect"></select></div>
+        </div>
+        <div id="fichaContent"></div>
+      </div>
     </div>
     <div class="tab-panel hidden" id="tabPanelEquipo">
       <div class="card wide">
@@ -1399,6 +1493,7 @@ Kit.loadFont();
           <button class="equipo-subnav-btn active" data-equipopanel="diario">📋 Control diario</button>
           <button class="equipo-subnav-btn" data-equipopanel="asistencia">📅 Historial de asistencia</button>
           <button class="equipo-subnav-btn" data-equipopanel="puntos">🏆 Historial de puntos</button>
+          <button class="equipo-subnav-btn" data-equipopanel="posiciones">📍 Posiciones</button>
         </div>
 
         <div id="equipoPanelDiario" class="equipo-panel">
@@ -1434,6 +1529,12 @@ Kit.loadFont();
               <tbody id="weekSummaryBody"></tbody>
             </table>
           </div>
+        </div>
+
+        <div id="equipoPanelPosiciones" class="equipo-panel hidden">
+          <p style="font-size:15px; font-weight:bold; color:var(--navy); margin:0 0 4px;">📍 Minutos por posición — temporada</p>
+          <p class="hint">Suma de todos los partidos registrados en directo. Toca un jugador para ver su ficha completa.</p>
+          <div id="posSeasonContent"></div>
         </div>
 
         <div id="equipoPanelAsistencia" class="equipo-panel hidden">
@@ -1566,6 +1667,7 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
     tabPanels[tab].classList.remove("hidden");
     document.getElementById("reportOverlay").classList.add("hidden");
     if(tab === "plantilla"){ loadPlayers(); }
+    if(tab === "ficha"){ ensurePlayersLoadedThen(()=> renderFicha()); }
     if(tab === "alineacion"){
       ensurePlayersLoadedThen(async ()=>{
         if(starterPositions.length === 0){ resetStarterPositionsFromFormation(); }
@@ -2056,13 +2158,69 @@ async function ensurePlayersLoadedThen(cb){
 // ---------------- ALINEACIÓN: formaciones, ABPs y pizarra táctica ----------------
 // Mismas coordenadas y etiquetas que la herramienta HTML anterior.
 // Cada línea: { y: fracción vertical, xs: [fracciones horizontales], labels: [...] }
+// ==================================================================
+// CATÁLOGO DE POSICIONES (22) — el mismo en Alineación, partido en vivo y balance de minutos
+// ==================================================================
+const POSITIONS = [
+  { code:"POR", label:"Portero",            group:"PORTERO" },
+  { code:"LI",  label:"Lateral Izq.",       group:"DEFENSA" },
+  { code:"CI",  label:"Central Izq.",       group:"DEFENSA" },
+  { code:"DFC", label:"Central",            group:"DEFENSA" },
+  { code:"CD",  label:"Central Der.",       group:"DEFENSA" },
+  { code:"LD",  label:"Lateral Der.",       group:"DEFENSA" },
+  { code:"CRI", label:"Carrilero Izq.",     group:"DEFENSA" },
+  { code:"CRD", label:"Carrilero Der.",     group:"DEFENSA" },
+  { code:"LIB", label:"Líbero",             group:"DEFENSA" },
+  { code:"PIV", label:"Pivote",             group:"CENTRO DEL CAMPO" },
+  { code:"MCI", label:"Mediocentro Izq.",   group:"CENTRO DEL CAMPO" },
+  { code:"MC",  label:"Mediocentro",        group:"CENTRO DEL CAMPO" },
+  { code:"MCD", label:"Mediocentro Der.",   group:"CENTRO DEL CAMPO" },
+  { code:"INI", label:"Interior Izq.",      group:"CENTRO DEL CAMPO" },
+  { code:"IND", label:"Interior Der.",      group:"CENTRO DEL CAMPO" },
+  { code:"MI",  label:"Medio Izq.",         group:"CENTRO DEL CAMPO" },
+  { code:"MD",  label:"Medio Der.",         group:"CENTRO DEL CAMPO" },
+  { code:"MP",  label:"Mediapunta",         group:"CENTRO DEL CAMPO" },
+  { code:"EI",  label:"Extremo Izq.",       group:"ATAQUE" },
+  { code:"ED",  label:"Extremo Der.",       group:"ATAQUE" },
+  { code:"SD",  label:"Segundo delantero",  group:"ATAQUE" },
+  { code:"DEL", label:"Delantero Centro",   group:"ATAQUE" },
+];
+const POS_GROUPS = ["PORTERO","DEFENSA","CENTRO DEL CAMPO","ATAQUE"];
+// Nombres antiguos de las disposiciones (antes del 10/11/2026) → nombre del catálogo.
+const POS_LEGACY = { "Delantero":"Delantero Centro", "Pivote Izq.":"Mediocentro Izq.", "Pivote Der.":"Mediocentro Der." };
+function normalizePosLabel(label){
+  if(!label) return "";
+  const l = POS_LEGACY[label] || label;
+  return POSITIONS.some(p=> p.label === l) ? l : "";
+}
+function posCode(label){ const p = POSITIONS.find(x=> x.label === normalizePosLabel(label)); return p ? p.code : ""; }
+function posLabelFromCode(code){ const p = POSITIONS.find(x=> x.code === code); return p ? p.label : ""; }
+// Puestos parecidos, por orden de preferencia (para recolocar al cambiar de sistema).
+const POS_NEAR = { POR:[], LI:["CRI","CI","MI"], CI:["DFC","LIB","CD","LI"], DFC:["CI","CD","LIB"], CD:["DFC","LIB","CI","LD"], LD:["CRD","CD","MD"],
+  CRI:["LI","MI","EI"], CRD:["LD","MD","ED"], LIB:["DFC","CI","CD"], PIV:["MC","MCI","MCD"], MCI:["PIV","MC","INI","MCD"], MC:["PIV","MCI","MCD","INI","IND"],
+  MCD:["PIV","MC","IND","MCI"], INI:["MCI","MC","MI","MP"], IND:["MCD","MC","MD","MP"], MI:["INI","EI","CRI"], MD:["IND","ED","CRD"], MP:["MC","SD","INI","IND"],
+  EI:["MI","INI","CRI"], ED:["MD","IND","CRD"], SD:["DEL","MP"], DEL:["SD","MP"] };
+// ¿Encaja un jugador en un puesto, según lo que pone en su ficha de la Plantilla (texto libre)?
+function playerFitsPos(p, code){
+  const s = (p.pos || "").toLowerCase();
+  if(!s) return false;
+  const tokens = s.toUpperCase().split(/[\s,\/;]+/).filter(Boolean);
+  const codeAlias = { DEL:["DEL","DL","DC"], DFC:["CT","DFC","CI","CD"], CI:["CT","DFC","CI"], CD:["CT","DFC","CD"], MC:["MC","MCO"], PIV:["MCD","PIV","MC"] };
+  if(tokens.includes(code) || (codeAlias[code] || []).some(a=> tokens.includes(a))) return true;
+  const kw = { POR:["porter"], LI:["lateral"], LD:["lateral"], CI:["central"], CD:["central"], DFC:["central"], LIB:["central","líbero","libero"],
+    CRI:["carril","lateral"], CRD:["carril","lateral"], PIV:["defensivo","pivote"], MCI:["medio"], MCD:["medio"], MC:["medio centro","mediocentro"],
+    INI:["medio","interior"], IND:["medio","interior"], MI:["extremo","medio"], MD:["extremo","medio"], MP:["medio centro","mediapunta"],
+    EI:["extremo"], ED:["extremo"], SD:["delantero"], DEL:["delantero"] }[code] || [];
+  return kw.some(k=> s.includes(k));
+}
+
 const FORMATIONS = {
   "1-4-1-4-1": [
     { y:0.90, xs:[0.50], labels:["Portero"] },
     { y:0.72, xs:[0.15,0.38,0.62,0.85], labels:["Lateral Izq.","Central Izq.","Central Der.","Lateral Der."] },
     { y:0.56, xs:[0.50], labels:["Pivote"] },
-    { y:0.38, xs:[0.15,0.38,0.62,0.85], labels:["Interior Izq.","Medio Izq.","Medio Der.","Interior Der."] },
-    { y:0.16, xs:[0.50], labels:["Delantero"] },
+    { y:0.38, xs:[0.15,0.38,0.62,0.85], labels:["Medio Izq.","Interior Izq.","Interior Der.","Medio Der."] },
+    { y:0.16, xs:[0.50], labels:["Delantero Centro"] },
   ],
   "1-4-3-3": [
     { y:0.90, xs:[0.50], labels:["Portero"] },
@@ -2073,27 +2231,27 @@ const FORMATIONS = {
   "1-4-4-2": [
     { y:0.90, xs:[0.50], labels:["Portero"] },
     { y:0.72, xs:[0.15,0.38,0.62,0.85], labels:["Lateral Izq.","Central Izq.","Central Der.","Lateral Der."] },
-    { y:0.46, xs:[0.15,0.38,0.62,0.85], labels:["Extremo Izq.","Mediocentro Izq.","Mediocentro Der.","Extremo Der."] },
-    { y:0.18, xs:[0.35,0.65], labels:["Delantero","Delantero"] },
+    { y:0.46, xs:[0.15,0.38,0.62,0.85], labels:["Medio Izq.","Mediocentro Izq.","Mediocentro Der.","Medio Der."] },
+    { y:0.18, xs:[0.35,0.65], labels:["Delantero Centro","Delantero Centro"] },
   ],
   "1-4-2-3-1": [
     { y:0.90, xs:[0.50], labels:["Portero"] },
     { y:0.74, xs:[0.15,0.38,0.62,0.85], labels:["Lateral Izq.","Central Izq.","Central Der.","Lateral Der."] },
-    { y:0.56, xs:[0.35,0.65], labels:["Pivote Izq.","Pivote Der."] },
-    { y:0.36, xs:[0.20,0.50,0.80], labels:["Interior Izq.","Mediapunta","Interior Der."] },
-    { y:0.16, xs:[0.50], labels:["Delantero"] },
+    { y:0.56, xs:[0.35,0.65], labels:["Mediocentro Izq.","Mediocentro Der."] },
+    { y:0.36, xs:[0.20,0.50,0.80], labels:["Extremo Izq.","Mediapunta","Extremo Der."] },
+    { y:0.16, xs:[0.50], labels:["Delantero Centro"] },
   ],
   "1-3-5-2": [
     { y:0.90, xs:[0.50], labels:["Portero"] },
     { y:0.74, xs:[0.25,0.50,0.75], labels:["Central Izq.","Central","Central Der."] },
     { y:0.46, xs:[0.10,0.30,0.50,0.70,0.90], labels:["Carrilero Izq.","Interior Izq.","Mediocentro","Interior Der.","Carrilero Der."] },
-    { y:0.18, xs:[0.35,0.65], labels:["Delantero","Delantero"] },
+    { y:0.18, xs:[0.35,0.65], labels:["Delantero Centro","Delantero Centro"] },
   ],
   "1-5-3-2": [
     { y:0.90, xs:[0.50], labels:["Portero"] },
     { y:0.74, xs:[0.08,0.29,0.50,0.71,0.92], labels:["Carrilero Izq.","Central Izq.","Líbero","Central Der.","Carrilero Der."] },
     { y:0.46, xs:[0.25,0.50,0.75], labels:["Interior Izq.","Mediocentro","Interior Der."] },
-    { y:0.18, xs:[0.35,0.65], labels:["Delantero","Delantero"] },
+    { y:0.18, xs:[0.35,0.65], labels:["Delantero Centro","Delantero Centro"] },
   ],
 };
 
@@ -2289,7 +2447,24 @@ let lastSubKitRects = []; // rectángulos de las camisetas de suplentes dibujada
 let selectedMedioIdx = -1;
 let resizingMedio = null; // { idx, ms0, d0 }
 let lastStarterKitRects = [];
+// Alineación estilo FFCV: huecos con "+ Asignar", abreviaturas de puesto (solo en pantalla,
+// nunca en la descarga) y ventana flotante para elegir jugador.
+let lineupExporting = false;
+let lpPending = null;      // { kind:"pick"|"menu"|"submenu"|"addsubs", idx?, pid?, sel?, q? }
+let dragStartInfo = null;  // { idx, x0, y0, px, py, moved }
 let kitRedrawPending = false;
+function drawLineupPill(ctx, x, y, text, bg, fontPx){
+  ctx.save();
+  ctx.font = `bold ${Math.max(10, fontPx)}px Arial`;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const w = ctx.measureText(text).width + fontPx*1.1, hgt = fontPx*1.6;
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x-w/2, y-hgt/2, w, hgt, hgt/2); else ctx.rect(x-w/2, y-hgt/2, w, hgt);
+  ctx.fillStyle = bg; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = "#ffffff"; ctx.stroke();
+  ctx.fillStyle = "#ffffff"; ctx.fillText(text, x, y+1);
+  ctx.restore();
+}
 function scheduleKitRedraw(){
   if(kitRedrawPending) return;
   kitRedrawPending = true;
@@ -2468,13 +2643,253 @@ function renderLineupSelects(){
     subsList.appendChild(row);
   }
 
+  renderSysBar();
   drawPitch();
 }
 
+
+let lastFormationValue = formationSelect.value;
+// ==================================================================
+// ALINEACIÓN ESTILO FFCV: barra de sistemas, contadores y ventana flotante para asignar
+// ==================================================================
+const SYS_FAV_KEY = "pizarra_sistema_favorito";
+function getFavSystem(){ try{ return localStorage.getItem(SYS_FAV_KEY) || ""; }catch(e){ return ""; } }
+function setFavSystem(k){ try{ localStorage.setItem(SYS_FAV_KEY, k); }catch(e){} }
+
+// Recoloca a los jugadores del sistema anterior en el nuevo: mismo puesto → puesto parecido →
+// primer hueco libre; si no caben, pasan a suplentes.
+function adaptLineupByPosition(oldSlots, oldStarters){
+  const newSlots = starterPositions;
+  const out = new Array(newSlots.length).fill("");
+  const pending = [];
+  oldStarters.forEach((pid, i)=>{ if(pid) pending.push({ pid, code: posCode(oldSlots[i] && oldSlots[i].label) }); });
+  const freeIdx = code=> newSlots.findIndex((s, j)=> !out[j] && posCode(s.label) === code);
+  const rest = [];
+  pending.forEach(o=>{ const j = o.code ? freeIdx(o.code) : -1; if(j >= 0) out[j] = o.pid; else rest.push(o); });
+  const rest2 = [];
+  rest.forEach(o=>{
+    let j = -1;
+    for(const c of (POS_NEAR[o.code] || [])){ j = freeIdx(c); if(j >= 0) break; }
+    if(j >= 0) out[j] = o.pid; else rest2.push(o);
+  });
+  rest2.forEach(o=>{
+    const j = out.findIndex((v, k)=> !v && !newSlots[k].isGK);
+    if(j >= 0) out[j] = o.pid; else lineupAddSubs([o.pid]);
+  });
+  lineupStarters = out;
+}
+
+function lineupCompactSubs(){
+  const ids = lineupSubs.filter(id=> !!id);
+  lineupSubs = new Array(SUBS_COUNT).fill("");
+  ids.slice(0, SUBS_COUNT).forEach((id, i)=>{ lineupSubs[i] = id; });
+}
+function lineupAddSubs(ids){
+  lineupCompactSubs();
+  const cur = lineupSubs.filter(Boolean);
+  let added = 0;
+  ids.forEach(id=>{
+    if(!id || cur.includes(id) || lineupStarters.includes(id)) return;
+    const j = lineupSubs.findIndex(x=> !x);
+    if(j < 0) return;
+    lineupSubs[j] = id; cur.push(id); added++;
+  });
+  return added;
+}
+
+function renderSysBar(){
+  const btns = document.getElementById("sysBtns");
+  if(!btns) return;
+  const fav = getFavSystem();
+  btns.innerHTML = "";
+  Object.keys(FORMATIONS).forEach(k=>{
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "sys-btn" + (formationSelect.value === k ? " on" : "");
+    b.textContent = k + (k === fav ? " ★" : "");
+    b.addEventListener("click", ()=>{
+      if(formationSelect.value === k) return;
+      formationSelect.value = k;
+      formationSelect.dispatchEvent(new Event("change"));
+    });
+    btns.appendChild(b);
+  });
+  const abpSel = document.getElementById("sysAbpSelect");
+  const isAbp = !!ABP_SETPIECES[formationSelect.value];
+  abpSel.innerHTML = `<option value="">⚽ Balón parado (ABP)…</option>` + Object.keys(ABP_SETPIECES).map(k=> `<option value="${escapeHtml(k)}"${formationSelect.value===k?" selected":""}>${escapeHtml(k)}</option>`).join("");
+  abpSel.classList.toggle("on", isAbp);
+  const favBtn = document.getElementById("sysFavBtn");
+  favBtn.style.display = isAbp ? "none" : "";
+  favBtn.textContent = (fav === formationSelect.value) ? "★ Sistema favorito" : "☆ Marcar favorito";
+
+  const n = starterPositions.length, onField = lineupStarters.filter(Boolean).length, nSubs = lineupSubs.filter(Boolean).length;
+  document.getElementById("sysCounters").innerHTML =
+    `<span class="sys-cnt">${isAbp ? "ABP" : "F11"} · ${n} posiciones</span>`
+    + `<span class="sys-cnt ${onField === n ? "ok" : "warn"}">${onField} de ${n} en el campo</span>`
+    + `<span class="sys-cnt">${nSubs} suplente${nSubs===1?"":"s"}</span>`
+    + `<span class="sys-cnt">${onField + nSubs} convocados</span>`;
+}
+(function initSysBar(){
+  // Mueve "Forma del campo" y "Color del campo" a la barra (la columna izquierda queda oculta).
+  const opts = document.getElementById("sysFieldOpts");
+  [["Forma del campo", pitchShapeSelect], ["Color del campo", pitchColorSelect]].forEach(([lbl, sel])=>{
+    const l = document.createElement("span"); l.className = "sys-lbl"; l.textContent = lbl;
+    opts.appendChild(l); opts.appendChild(sel);
+  });
+  document.getElementById("sysAbpSelect").addEventListener("change", (e)=>{
+    if(!e.target.value) return;
+    formationSelect.value = e.target.value;
+    formationSelect.dispatchEvent(new Event("change"));
+  });
+  document.getElementById("sysFavBtn").addEventListener("click", ()=>{ setFavSystem(formationSelect.value); renderSysBar(); });
+  document.getElementById("addSubsBtn").addEventListener("click", (e)=>{ e.stopPropagation(); lpOpen({ kind:"addsubs", sel:new Set() }); });
+  const fav = getFavSystem();
+  if(fav && FORMATIONS[fav]){ formationSelect.value = fav; lastFormationValue = fav; resetStarterPositionsFromFormation(); }
+})();
+
+// ---- Ventana flotante ----
+function lpClose(){ if(lpPending){ lpPending = null; renderLineupPop(); } }
+function lpOpen(p){ lpPending = p; renderLineupPop(); }
+function lpSlotCode(idx){ const s = starterPositions[idx]; return s ? posCode(s.label) : ""; }
+function lpRow(p, code, multi){
+  const rec = code && playerFitsPos(p, code), sup = lineupSubs.includes(p.id);
+  const chk = multi && lpPending.sel.has(p.id);
+  return `<div class="it" data-id="${p.id}">${multi ? `<input type="checkbox"${chk?" checked":""}>` : ""}<span class="n">${escapeHtml(p.num||"-")}</span>`
+    + `<span><div class="nm">${escapeHtml(displayAlias(p))}</div><div class="pp">${escapeHtml(p.pos || "Sin puesto")}</div></span>`
+    + (sup && !multi ? `<span class="tg s">SUP</span>` : rec ? `<span class="tg r">Recomendado</span>` : "") + `</div>`;
+}
+function lpListHtml(code, multi, q){
+  let L = players.filter(p=> !lineupStarters.includes(p.id));
+  if(multi) L = L.filter(p=> !lineupSubs.includes(p.id));
+  if(q){ const f = q.toLowerCase(); L = L.filter(p=> (displayAlias(p)+" "+p.name+" "+(p.num||"")+" "+(p.pos||"")).toLowerCase().includes(f)); }
+  if(!L.length) return `<div class="empty">No hay jugadores disponibles</div>`;
+  if(multi) return L.map(p=> lpRow(p, null, true)).join("");
+  const sup = L.filter(p=> lineupSubs.includes(p.id)), rest = L.filter(p=> !lineupSubs.includes(p.id));
+  const rec = code ? rest.filter(p=> playerFitsPos(p, code)) : [], oth = rest.filter(p=> !rec.includes(p));
+  let html = "";
+  if(sup.length) html += `<div class="gh">CONVOCADOS EN EL BANQUILLO</div>` + sup.sort((a,b)=> (code?playerFitsPos(b,code):0) - (code?playerFitsPos(a,code):0)).map(p=> lpRow(p, code)).join("");
+  if(rec.length) html += `<div class="gh g">RECOMENDADOS PARA ${escapeHtml(code)}</div>` + rec.map(p=> lpRow(p, code)).join("");
+  if(oth.length) html += `<div class="gh">${rec.length || sup.length ? "RESTO DE LA PLANTILLA" : "PLANTILLA"}</div>` + oth.map(p=> lpRow(p, code)).join("");
+  return html;
+}
+function lpAssign(idx, pid){
+  const prev = lineupStarters.indexOf(pid), cur = lineupStarters[idx];
+  if(prev >= 0){ lineupStarters[prev] = cur || ""; }
+  else if(cur){ lineupAddSubs([cur]); }
+  lineupSubs = lineupSubs.map(x=> x === pid ? "" : x);
+  lineupCompactSubs();
+  lineupStarters[idx] = pid;
+  lpPending = null;
+  renderLineupSelects(); renderLineupPop();
+}
+function lpBindRows(pop){
+  pop.querySelectorAll(".it").forEach(r=> r.addEventListener("click", ()=>{
+    const id = r.dataset.id;
+    if(lpPending.kind === "addsubs"){
+      lpPending.sel.has(id) ? lpPending.sel.delete(id) : lpPending.sel.add(id);
+      r.querySelector("input").checked = lpPending.sel.has(id);
+      pop.querySelector("#lpOk").textContent = "Añadir " + lpPending.sel.size;
+    } else {
+      lpAssign(lpPending.idx, id);
+    }
+  }));
+}
+function lpPlace(pop, anchorRect){
+  const stage = document.getElementById("pitchStage").getBoundingClientRect();
+  const pw = 310, ph = pop.offsetHeight || 380;
+  let left = anchorRect.right - stage.left + 10;
+  if(stage.left + left + pw > window.innerWidth - 8) left = anchorRect.left - stage.left - pw - 10;
+  left = Math.max(8 - stage.left, Math.min(left, window.innerWidth - stage.left - pw - 8));
+  let top = anchorRect.top - stage.top + anchorRect.height/2 - ph/2;
+  top = Math.max(-stage.top + 8, Math.min(top, stage.height - ph + 40));
+  pop.style.left = left + "px"; pop.style.top = top + "px";
+}
+function lpSlotRect(idx){
+  const { PITCH_TOP, PITCH_BOTTOM, PITCH_LEFT, PITCH_RIGHT } = pitchGeom();
+  const slot = starterPositions[idx];
+  const cx = PITCH_LEFT + slot.x*(PITCH_RIGHT-PITCH_LEFT), cy = PITCH_TOP + displayY(slot.y)*(PITCH_BOTTOM-PITCH_TOP);
+  const r = pitchCanvas.getBoundingClientRect(), k = r.width / pitchCanvas.width;
+  const half = 114 * KIT_SCALE_FULL * k;
+  return { left: r.left + cx*k - half, right: r.left + cx*k + half, top: r.top + cy*k - half, height: half*2 };
+}
+function renderLineupPop(){
+  const host = document.getElementById("lineupPop");
+  if(!host) return;
+  host.innerHTML = "";
+  if(!lpPending) return;
+  const pop = document.createElement("div");
+  pop.className = "lp-pop";
+  pop.addEventListener("pointerdown", e=> e.stopPropagation());
+  let anchorRect;
+  if(lpPending.kind === "pick"){
+    const idx = lpPending.idx, code = lpSlotCode(idx), label = normalizePosLabel(starterPositions[idx].label) || starterPositions[idx].label;
+    pop.innerHTML = `<div class="ph">${code ? `<span class="cd">${code}</span>` : ""}<span class="tt">${escapeHtml(label)}</span><button class="cl" title="Cerrar">✕</button></div>`
+      + `<div class="sr"><input placeholder="Buscar jugador…" value="${escapeHtml(lpPending.q || "")}"></div><div class="ls">${lpListHtml(code, false, lpPending.q)}</div>`;
+    host.appendChild(pop);
+    const inp = pop.querySelector("input");
+    inp.addEventListener("input", ()=>{ lpPending.q = inp.value; pop.querySelector(".ls").innerHTML = lpListHtml(code, false, lpPending.q); lpBindRows(pop); });
+    if(window.matchMedia("(pointer:fine)").matches) setTimeout(()=> inp.focus({ preventScroll:true }), 0);
+    lpBindRows(pop);
+    anchorRect = lpSlotRect(idx);
+  } else if(lpPending.kind === "menu"){
+    const idx = lpPending.idx, code = lpSlotCode(idx);
+    const p = players.find(x=> x.id === lineupStarters[idx]);
+    if(!p){ lpPending = null; return; }
+    pop.innerHTML = `<div class="ph">${code ? `<span class="cd">${code}</span>` : ""}<span class="tt">${escapeHtml(displayAlias(p))}</span><button class="cl" title="Cerrar">✕</button></div>`
+      + `<div class="mn"><button id="lpM1">🔄 Cambiar jugador</button><button id="lpM2">✏️ Editar nombre en la camiseta</button><button id="lpM3" class="d">⬇️ Quitar del campo (pasa a suplente)</button></div>`;
+    host.appendChild(pop);
+    pop.querySelector("#lpM1").onclick = ()=> lpOpen({ kind:"pick", idx });
+    pop.querySelector("#lpM2").onclick = ()=>{ lpPending = null; renderLineupPop(); openKitEditor(p, !!starterPositions[idx].isGK); };
+    pop.querySelector("#lpM3").onclick = ()=>{ lineupStarters[idx] = ""; lineupAddSubs([p.id]); lpPending = null; renderLineupSelects(); renderLineupPop(); };
+    anchorRect = lpSlotRect(idx);
+  } else if(lpPending.kind === "submenu"){
+    const p = players.find(x=> x.id === lpPending.pid);
+    if(!p){ lpPending = null; return; }
+    pop.innerHTML = `<div class="ph"><span class="cd">SUP</span><span class="tt">${escapeHtml(displayAlias(p))}</span><button class="cl" title="Cerrar">✕</button></div>`
+      + `<div class="mn"><button id="lpS1">✏️ Editar nombre en la camiseta</button><button id="lpS2" class="d">✕ Quitar de convocados</button></div>`;
+    host.appendChild(pop);
+    pop.querySelector("#lpS1").onclick = ()=>{ lpPending = null; renderLineupPop(); openKitEditor(p, (p.pos||"").toLowerCase().includes("porter")); };
+    pop.querySelector("#lpS2").onclick = ()=>{ lineupSubs = lineupSubs.map(x=> x === p.id ? "" : x); lineupCompactSubs(); lpPending = null; renderLineupSelects(); renderLineupPop(); };
+    const hit = lastSubKitRects.find(s=> s.id === p.id);
+    const r = pitchCanvas.getBoundingClientRect(), k = r.width / pitchCanvas.width;
+    anchorRect = hit ? { left: r.left + hit.rect.x*k, right: r.left + (hit.rect.x+hit.rect.w)*k, top: r.top + hit.rect.y*k, height: hit.rect.h*k } : r;
+  } else if(lpPending.kind === "addsubs"){
+    pop.innerHTML = `<div class="ph"><span class="cd">SUP</span><span class="tt">Añadir suplentes</span><button class="cl" title="Cerrar">✕</button></div>`
+      + `<div class="sr"><input placeholder="Buscar jugador…" value="${escapeHtml(lpPending.q || "")}"></div><div class="ls">${lpListHtml(null, true, lpPending.q)}</div>`
+      + `<div class="ft"><button style="background:#2E9E4F" id="lpOk">Añadir ${lpPending.sel.size}</button><button style="background:#6b7280" id="lpCc">Cancelar</button></div>`;
+    host.appendChild(pop);
+    const inp = pop.querySelector("input");
+    inp.addEventListener("input", ()=>{ lpPending.q = inp.value; pop.querySelector(".ls").innerHTML = lpListHtml(null, true, lpPending.q); lpBindRows(pop); });
+    lpBindRows(pop);
+    pop.querySelector("#lpOk").onclick = ()=>{
+      const want = [...lpPending.sel];
+      const added = lineupAddSubs(want);
+      lpPending = null; renderLineupSelects(); renderLineupPop();
+      if(added < want.length) alert(`Solo caben ${SUBS_COUNT} suplentes: se han añadido ${added}.`);
+    };
+    pop.querySelector("#lpCc").onclick = lpClose;
+    anchorRect = document.getElementById("addSubsBtn").getBoundingClientRect();
+  }
+  pop.querySelector(".cl").onclick = lpClose;
+  lpPlace(pop, anchorRect);
+}
+document.addEventListener("keydown", e=>{ if(e.key === "Escape" && lpPending) lpClose(); });
+document.addEventListener("pointerdown", e=>{
+  if(lpPending && !e.target.closest(".lp-pop") && e.target !== pitchCanvas && e.target.id !== "addSubsBtn") lpClose();
+});
+window.addEventListener("resize", ()=>{ if(lpPending) renderLineupPop(); });
+
 formationSelect.addEventListener("change", ()=>{
-  // Cambiar de disposición NO borra los jugadores ya puestos: se conservan y solo se recolocan
-  // (y las posiciones arrastradas a mano se reinician a la disposición elegida).
+  // Cambiar de disposición NO borra los jugadores ya puestos. Entre sistemas de juego, cada
+  // jugador va a su mismo puesto o al más parecido (lateral sigue de lateral...); con las ABP,
+  // se recolocan por orden como hasta ahora.
+  const oldKey = lastFormationValue, newKey = formationSelect.value;
+  lastFormationValue = newKey;
+  const oldSlots = (oldKey && LAYOUTS[oldKey]) ? flattenSlots(oldKey) : [];
+  const oldStarters = [...lineupStarters];
   resetStarterPositionsFromFormation();
+  if(FORMATIONS[oldKey] && FORMATIONS[newKey]) adaptLineupByPosition(oldSlots, oldStarters);
+  lpClose();
   renderLineupSelects();
   // Las lineas de movimiento y el balon pertenecen a la jugada concreta, no tiene sentido
   // conservarlas al cambiar a otra disposicion distinta.
@@ -2602,7 +3017,7 @@ saveLineupToMatchBtn.addEventListener("click", async ()=>{
   // Posición de cada titular en el campo, para que la pantalla del partido los dibuje
   // exactamente donde están en la alineación (x,y de 0 a 1 en la escala del campo completo).
   live.lineupSlots = lineupStarters.map((id, i)=> id && starterPositions[i]
-    ? { id, x: starterPositions[i].x, y: starterPositions[i].y, gk: !!starterPositions[i].isGK } : null).filter(Boolean);
+    ? { id, x: starterPositions[i].x, y: starterPositions[i].y, gk: !!starterPositions[i].isGK, pos: normalizePosLabel(starterPositions[i].label) } : null).filter(Boolean);
 
   const { error } = await supabase.from("matches").update({
     date: matchFecha.value || freshMatch.date,
@@ -2830,11 +3245,26 @@ function drawPitch(){
     const cy = PITCH_TOP + y*fieldH;
     const player = players.find(p=> p.id === lineupStarters[idx]);
     const sc = shape === "medio" ? KIT_SCALE_MEDIO * (slot.ms || 1) : KIT_SCALE_FULL;
-    const kitName = player ? displayAlias(player) : (slot.label || "");
+    if(!player){
+      if(lineupExporting) return; // los huecos vacíos no salen en la descarga
+      // Hueco vacío: camiseta en silueta, "+ Asignar" y la abreviatura del puesto.
+      ctx.save(); ctx.globalAlpha = 0.3;
+      Kit.draw(ctx, cx, cy, sc, { name:"", num:"", gk: !!slot.isGK }, scheduleKitRedraw);
+      ctx.restore();
+      drawLineupPill(ctx, cx, cy - 20*sc/KIT_SCALE_FULL, "+ Asignar", "#E8641E", Math.round(15*sc/KIT_SCALE_FULL));
+      const code = posCode(slot.label);
+      if(code || slot.label) drawLineupPill(ctx, cx, cy + 123*sc, code || slot.label, "#0d1b3e", Math.round(14*sc/KIT_SCALE_FULL));
+      return;
+    }
+    const kitName = displayAlias(player);
     Kit.draw(ctx, cx, cy, sc, {
-      name: kitName, num: player ? (player.num || "") : "",
-      gk: !!slot.isGK, adj: player ? player.kit_name : null,
+      name: kitName, num: player.num || "",
+      gk: !!slot.isGK, adj: player.kit_name,
     }, scheduleKitRedraw);
+    if(!lineupExporting){
+      const code = posCode(slot.label);
+      if(code) drawLineupPill(ctx, cx, cy + 123*sc, code, "#0d1b3e", Math.round(14*sc/KIT_SCALE_FULL));
+    }
     if(shape === "medio"){
       const r = { x: cx - 114*sc, y: cy - 42*sc - 80*sc, w: 228*sc, h: 245*sc };
       lastStarterKitRects[idx] = r;
@@ -3062,7 +3492,14 @@ pitchCanvas.addEventListener("pointerdown", (evt)=>{
     const newSel = idx >= 0 ? idx : -1;
     if(newSel !== selectedMedioIdx){ selectedMedioIdx = newSel; drawPitch(); }
   }
+  if(idx < 0) lpClose();
+  if(idx < 0 && pitchShapeSelect.value !== "medio"){
+    // Tocar la camiseta de un suplente abre su menú.
+    const hit = lastSubKitRects.find(s=> pos.x >= s.rect.x && pos.x <= s.rect.x + s.rect.w && pos.y >= s.rect.y && pos.y <= s.rect.y + s.rect.h);
+    if(hit){ lpOpen({ kind:"submenu", pid: hit.id }); evt.preventDefault(); return; }
+  }
   if(idx >= 0){
+    dragStartInfo = { idx, x0: starterPositions[idx].x, y0: starterPositions[idx].y, px: pos.x, py: pos.y, moved:false };
     dragIdx = idx;
     pitchCanvas.setPointerCapture(evt.pointerId);
     pitchCanvas.style.cursor = "grabbing";
@@ -3114,6 +3551,11 @@ pitchCanvas.addEventListener("pointermove", (evt)=>{
   if(dragIdx < 0) return;
   const { PITCH_TOP, PITCH_BOTTOM, PITCH_LEFT, PITCH_RIGHT } = pitchGeom();
   const pos = canvasPosFromEvent(evt);
+  if(dragStartInfo && !dragStartInfo.moved){
+    if(Math.hypot(pos.x - dragStartInfo.px, pos.y - dragStartInfo.py) < 10) return; // aún es un toque, no un arrastre
+    dragStartInfo.moved = true;
+    lpClose();
+  }
   const playH = PITCH_BOTTOM - PITCH_TOP;
   let xf = (pos.x - PITCH_LEFT) / (PITCH_RIGHT - PITCH_LEFT);
   let yf = (pos.y - PITCH_TOP) / playH;
@@ -3165,8 +3607,37 @@ function endDrag(evt){
     return;
   }
   if(dragIdx < 0) return;
-  dragIdx = -1;
+  const endedIdx = dragIdx, info = dragStartInfo;
+  dragIdx = -1; dragStartInfo = null;
   pitchCanvas.style.cursor = "grab";
+  if(info && evt && evt.type === "pointerup"){
+    if(!info.moved){
+      // Un toque (sin arrastrar): hueco vacío → elegir jugador; camiseta → menú.
+      starterPositions[endedIdx].x = info.x0; starterPositions[endedIdx].y = info.y0;
+      lpOpen(lineupStarters[endedIdx] ? { kind:"menu", idx: endedIdx } : { kind:"pick", idx: endedIdx });
+    } else {
+      // Soltada encima de otro puesto: intercambian jugador (el puesto se queda en su sitio).
+      const pos = canvasPosFromEvent(evt);
+      const { PITCH_TOP, PITCH_BOTTOM, PITCH_LEFT, PITCH_RIGHT } = pitchGeom();
+      const isMedio = pitchShapeSelect.value === "medio";
+      let target = -1, best = isMedio ? 34 : 55;
+      starterPositions.forEach((slot, j)=>{
+        if(j === endedIdx || (isMedio && slot.y > MEDIO_CUTOFF)) return;
+        const cx = PITCH_LEFT + slot.x*(PITCH_RIGHT-PITCH_LEFT), cy = PITCH_TOP + displayY(slot.y)*(PITCH_BOTTOM-PITCH_TOP);
+        const d = Math.hypot(pos.x-cx, pos.y-cy);
+        if(d < best){ best = d; target = j; }
+      });
+      if(target >= 0 && lineupStarters[endedIdx]){
+        starterPositions[endedIdx].x = info.x0; starterPositions[endedIdx].y = info.y0;
+        const a = lineupStarters[endedIdx]; lineupStarters[endedIdx] = lineupStarters[target]; lineupStarters[target] = a;
+        renderLineupSelects();
+      } else if(!lineupStarters[endedIdx]){
+        // Un hueco vacío no se mueve: vuelve a su sitio.
+        starterPositions[endedIdx].x = info.x0; starterPositions[endedIdx].y = info.y0;
+        drawPitch();
+      }
+    }
+  }
   if(evt && evt.pointerId !== undefined){
     try{ pitchCanvas.releasePointerCapture(evt.pointerId); }catch(e){}
   }
@@ -3337,6 +3808,7 @@ async function openKitEditor(player, gk){
   kitEdLoad(player.kit_name || null);
 }
 pitchCanvas.addEventListener("dblclick", (evt)=>{
+  lpClose();
   if(pitchShapeSelect.value === "medio" && abpDrawMode) return;
   const pos = canvasPosFromEvent(evt);
   const idx = findNearestStarter(pos.x, pos.y);
@@ -3353,7 +3825,10 @@ pitchCanvas.addEventListener("dblclick", (evt)=>{
 });
 
 document.getElementById("downloadLineupBtn").addEventListener("click", ()=>{
-  if(selectedMedioIdx >= 0){ selectedMedioIdx = -1; drawPitch(); } // sin marcas de selección en la descarga
+  if(selectedMedioIdx >= 0){ selectedMedioIdx = -1; } // sin marcas de selección en la descarga
+  lpClose();
+  lineupExporting = true; drawPitch(); // sin huecos vacíos ni abreviaturas en la descarga
+  setTimeout(()=>{ lineupExporting = false; drawPitch(); }, 0);
   const link = document.createElement("a");
   const rivalSlug = (matchRival.value || "alineacion").trim().replace(/\s+/g,"_");
   link.download = `alineacion_${rivalSlug}.png`;
@@ -3362,7 +3837,10 @@ document.getElementById("downloadLineupBtn").addEventListener("click", ()=>{
 });
 
 document.getElementById("downloadLineupPdfBtn").addEventListener("click", ()=>{
-  if(selectedMedioIdx >= 0){ selectedMedioIdx = -1; drawPitch(); } // sin marcas de selección en la descarga
+  if(selectedMedioIdx >= 0){ selectedMedioIdx = -1; } // sin marcas de selección en la descarga
+  lpClose();
+  lineupExporting = true; drawPitch(); // sin huecos vacíos ni abreviaturas en la descarga
+  setTimeout(()=>{ lineupExporting = false; drawPitch(); }, 0);
   if(!window.jspdf){
     alert("No se ha podido cargar el generador de PDF. Comprueba tu conexión a internet e inténtalo de nuevo.");
     return;
@@ -3687,7 +4165,7 @@ function renderMatchList(){
       const { data, error } = await supabase.from("matches").select("*").eq("id", m.id).single();
       if(error){ showMsg(matchMsg, "No se ha podido abrir el partido: " + error.message, "error"); return; }
       currentMatch = data;
-      liveSelected = null; liveCambioOut = null; liveCambioQueue = [];
+      liveSelected = null; liveCambioOut = null; liveCambioQueue = []; liveMoveMode = false; liveMovePending = null;
       subscribeToMatchRealtime(currentMatch.id);
       renderMatchList();
       renderMatchDetail();
@@ -3802,6 +4280,8 @@ function buildMatchReportHTML(match){
     if(ev.type === "cambio"){
       const pOut = players.find(p=>p.id===ev.outId), pIn = players.find(p=>p.id===ev.inId);
       text = "🔄 Sale " + (pOut ? displayAlias(pOut) : "?") + " · Entra " + (pIn ? displayAlias(pIn) : "?");
+    } else if(ev.type === "posicion"){
+      text = posEventText(ev);
     } else {
       let col = null;
       if(ev.type === "team_stat" || ev.type === "custom"){ col = statColumns.find(c=> c.key === ev.key); }
@@ -3983,6 +4463,9 @@ function buildMatchReportHTML(match){
 
     <p class="report-section-title">Individual</p>
     ${tableHtml}
+
+    <p class="report-section-title">📍 Minutos por posición</p>
+    ${matchPositionsTableHtml(match)}
 
     <p class="report-section-title">Sustituciones</p>
     ${subsHtml}
@@ -4210,6 +4693,19 @@ function positionColorClass(pos){
 // PANTALLA DEL PARTIDO: alineación en el campo (camisetas) + banquillo + minutos
 // ==================================================================
 let liveShowMinutes = false;   // botón "Ver minutos"
+let liveMoveMode = false;      // botón "✋ Mover jugadores"
+let liveMovePending = null;    // { pid, kind:"move"|"tap", nx, ny } mientras se elige la posición
+function suggestPosByZone(x, y){
+  if(y > 0.84) return "Portero";
+  if(y > 0.62) return x < 0.25 ? "Lateral Izq." : x < 0.45 ? "Central Izq." : x < 0.55 ? "Central" : x < 0.75 ? "Central Der." : "Lateral Der.";
+  if(y > 0.36){
+    if(x < 0.25) return "Medio Izq."; if(x > 0.75) return "Medio Der.";
+    if(x < 0.42) return "Interior Izq."; if(x > 0.58) return "Interior Der.";
+    return y > 0.54 ? "Pivote" : "Mediocentro";
+  }
+  if(x < 0.3) return "Extremo Izq."; if(x > 0.7) return "Extremo Der.";
+  return y > 0.27 ? "Mediapunta" : "Delantero Centro";
+}
 function minutesColor(m){ return m < 30 ? "#2E9E4F" : (m < 60 ? "#E8A317" : "#D32F2F"); }
 // Minutos jugados por cada jugador en 1ª y 2ª parte, sumando todos sus tramos (cambios ilimitados).
 function computeHalfMinutes(match){
@@ -4230,21 +4726,174 @@ function computeHalfMinutes(match){
 }
 // Posición en el campo de cada jugador que está jugando: la de la alineación guardada; el que
 // entra en un cambio ocupa el sitio del que sale.
-function computeLiveSlots(match, onPitch){
+// Posición inicial de cada titular: la guardada en la alineación (lineupSlots) o, en partidos
+// antiguos, la del sistema táctico por orden.
+function liveBaseSlots(match){
   const slot = {};
   const saved = Array.isArray(match.live.lineupSlots) ? match.live.lineupSlots : [];
-  saved.forEach(s=>{ if(s && s.id) slot[s.id] = { x:s.x, y:s.y, gk:!!s.gk }; });
+  const fs = (match.sistema_partido && LAYOUTS[match.sistema_partido]) ? flattenSlots(match.sistema_partido) : [];
   const starters = match.live.startersIds || [];
-  if(starters.some(id=> !slot[id]) && match.sistema_partido && LAYOUTS[match.sistema_partido]){
-    const fs = flattenSlots(match.sistema_partido);
-    starters.forEach((id, i)=>{ if(!slot[id] && fs[i]) slot[id] = { x:fs[i].x, y:fs[i].y, gk:fs[i].isGK }; });
-  }
-  match.live.events.forEach(ev=>{
-    if(ev.type === "cambio" && slot[ev.outId]){ slot[ev.inId] = slot[ev.outId]; delete slot[ev.outId]; }
+  saved.forEach(s=>{
+    if(!s || !s.id) return;
+    const i = starters.indexOf(s.id);
+    slot[s.id] = { x:s.x, y:s.y, gk:!!s.gk, pos: normalizePosLabel(s.pos) || normalizePosLabel(fs[i] && fs[i].label) || (s.gk ? "Portero" : "") };
   });
-  const missing = [...onPitch].filter(id=> !slot[id]);
-  missing.forEach((id, i)=>{ slot[id] = { x:(i+1)/(missing.length+1), y:0.5, gk:false }; });
+  starters.forEach((id, i)=>{ if(!slot[id] && fs[i]) slot[id] = { x:fs[i].x, y:fs[i].y, gk:fs[i].isGK, pos: normalizePosLabel(fs[i].label) }; });
   return slot;
+}
+// Aplica un evento de posición (cambio de puesto o intercambio) a las posiciones del campo.
+function applyPosEvent(slot, ev){
+  [[ev.playerId, ev.to, ev.x, ev.y], [ev.playerId2, ev.to2, ev.x2, ev.y2]].forEach(([pid, to, x, y])=>{
+    if(!pid || !slot[pid]) return;
+    slot[pid] = { x: (x !== undefined ? x : slot[pid].x), y: (y !== undefined ? y : slot[pid].y), gk: to === "Portero", pos: to || slot[pid].pos };
+  });
+}
+function computeLiveSlots(match, onPitch){
+  const slot = liveBaseSlots(match);
+  match.live.events.forEach(ev=>{
+    if(ev.type === "cambio" && slot[ev.outId]){ slot[ev.inId] = { ...slot[ev.outId] }; delete slot[ev.outId]; }
+    else if(ev.type === "posicion") applyPosEvent(slot, ev);
+  });
+  const ov = match.live.posOverride || {};
+  Object.keys(ov).forEach(pid=>{ if(slot[pid] && onPitch.has(pid)){ slot[pid].x = ov[pid].x; slot[pid].y = ov[pid].y; } });
+  const missing = [...onPitch].filter(id=> !slot[id]);
+  missing.forEach((id, i)=>{ slot[id] = { x:(i+1)/(missing.length+1), y:0.5, gk:false, pos:"" }; });
+  return slot;
+}
+// Minutos jugados por cada jugador en cada posición: { pid: { "Lateral Izq.": 40, ... } }.
+// Mismo criterio de minutos que el resto de la app (minuto de cada evento).
+
+// ==================================================================
+// MINUTOS POR POSICIÓN: informe del partido, Ficha de jugador y pestaña Equipo
+// ==================================================================
+function posEntriesSorted(byPos){
+  return Object.entries(byPos || {}).filter(([,m])=> m > 0).sort((a,b)=> b[1]-a[1]);
+}
+function posChipsHtml(byPos){
+  const e = posEntriesSorted(byPos);
+  if(!e.length) return `<span class="hint">—</span>`;
+  return e.map(([lbl, m], i)=> `<span class="pos-chip${i===0?" main":""}" title="${escapeHtml(lbl)}">${escapeHtml(posCode(lbl) || lbl)} ${m}'</span>`).join("");
+}
+function posBarsHtml(byPos){
+  const e = posEntriesSorted(byPos);
+  const total = e.reduce((s,[,m])=> s+m, 0);
+  if(!total) return `<p class="hint">Sin minutos con posición registrada.</p>`;
+  return `<div class="pos-bars">` + e.map(([lbl, m], i)=>{
+    const pct = Math.round(m*100/total);
+    return `<div class="pos-bar-row${i===0?" main":""}"><span class="lb">${escapeHtml(posCode(lbl) || "—")}<small>${escapeHtml(lbl)}</small></span>`
+      + `<div class="pos-bar-track"><div class="pos-bar-fill" style="width:${Math.max(2,pct)}%"></div></div><span class="vl">${m}' · ${pct}%</span></div>`;
+  }).join("") + `</div>`;
+}
+// Tabla del informe del partido.
+function matchPositionsTableHtml(match){
+  const pm = computePositionMinutes(match);
+  const rows = players.filter(p=> pm[p.id] && posEntriesSorted(pm[p.id]).length)
+    .map(p=> ({ p, byPos: pm[p.id], total: Object.values(pm[p.id]).reduce((s,m)=> s+m, 0) }))
+    .sort((a,b)=> b.total - a.total);
+  if(!rows.length) return `<p class="hint">Sin datos de posición en este partido.</p>`;
+  return `<table class="data-table" style="font-size:11px;"><thead><tr><th>Jugador</th><th>Min</th><th>Posición principal</th><th>Minutos por posición</th></tr></thead><tbody>`
+    + rows.map(r=>{ const main = posEntriesSorted(r.byPos)[0];
+      return `<tr><td class="name-td">${escapeHtml(displayAlias(r.p))}</td><td>${r.total}</td><td>${escapeHtml(main ? main[0] : "")}</td><td style="text-align:left;">${posChipsHtml(r.byPos)}</td></tr>`; }).join("")
+    + `</tbody></table>`;
+}
+// Datos de temporada: todos los partidos del club con registro en directo.
+async function loadSeasonPositionData(){
+  if(!currentClub) return null;
+  const { data, error } = await supabase.from("matches").select("id,date,rival,condicion,sistema_partido,live").eq("club_id", currentClub.id);
+  if(error || !data) return null;
+  const res = {};
+  data.filter(m=> m.live && m.live.started && Array.isArray(m.live.events))
+    .sort((a,b)=> String(a.date||"").localeCompare(String(b.date||"")))
+    .forEach(m=>{
+      const pm = computePositionMinutes(m);
+      Object.keys(pm).forEach(pid=>{
+        const total = Object.values(pm[pid]).reduce((s,x)=> s+x, 0);
+        if(!total) return;
+        const r = res[pid] = res[pid] || { total:0, matches:0, byPos:{}, perMatch:[] };
+        r.total += total; r.matches++;
+        Object.entries(pm[pid]).forEach(([l,x])=>{ r.byPos[l] = (r.byPos[l]||0) + x; });
+        r.perMatch.push({ date:m.date, rival:m.rival, condicion:m.condicion, total, byPos:pm[pid] });
+      });
+    });
+  return res;
+}
+async function renderSeasonPositions(){
+  const box = document.getElementById("posSeasonContent");
+  box.innerHTML = `<p class="hint">Cargando…</p>`;
+  const data = await loadSeasonPositionData();
+  if(!data){ box.innerHTML = `<p class="hint">No se han podido cargar los partidos.</p>`; return; }
+  const rows = players.map(p=> ({ p, d: data[p.id] })).sort((a,b)=> (b.d ? b.d.total : 0) - (a.d ? a.d.total : 0));
+  box.innerHTML = `<div style="overflow-x:auto;"><table class="data-table pos-table"><thead><tr><th>Jugador</th><th>Partidos</th><th>Minutos</th><th>Posición principal</th><th>Minutos por posición</th></tr></thead><tbody>`
+    + rows.map(({p, d})=>{
+      const main = d ? posEntriesSorted(d.byPos)[0] : null;
+      return `<tr><td class="name-td" data-pid="${p.id}">${escapeHtml(displayAlias(p))}</td><td>${d ? d.matches : 0}</td><td>${d ? d.total : 0}</td>`
+        + `<td>${main ? escapeHtml(main[0]) + " · " + Math.round(main[1]*100/d.total) + "%" : "—"}</td><td style="text-align:left;">${d ? posChipsHtml(d.byPos) : '<span class="hint">—</span>'}</td></tr>`;
+    }).join("") + `</tbody></table></div>`;
+  box.querySelectorAll("td[data-pid]").forEach(td=> td.addEventListener("click", ()=>{
+    fichaSelectedPid = td.dataset.pid;
+    document.querySelector('.tab-btn[data-tab="ficha"]').click();
+  }));
+}
+let fichaSelectedPid = null;
+async function renderFicha(){
+  const sel = document.getElementById("fichaPlayerSelect");
+  const sorted = [...players].sort((a,b)=> (parseInt(a.num)||999) - (parseInt(b.num)||999));
+  if(!fichaSelectedPid && sorted.length) fichaSelectedPid = sorted[0].id;
+  sel.innerHTML = sorted.map(p=> `<option value="${p.id}"${p.id===fichaSelectedPid?" selected":""}>${escapeHtml((p.num ? p.num + " · " : "") + displayAlias(p))}</option>`).join("");
+  sel.onchange = ()=>{ fichaSelectedPid = sel.value; renderFicha(); };
+  const box = document.getElementById("fichaContent");
+  const p = players.find(x=> x.id === fichaSelectedPid);
+  if(!p){ box.innerHTML = `<p class="hint">Todavía no hay jugadores en la Plantilla.</p>`; return; }
+  box.innerHTML = `<p class="hint">Cargando…</p>`;
+  const data = await loadSeasonPositionData();
+  if(fichaSelectedPid !== p.id) return;
+  const d = data && data[p.id];
+  const main = d ? posEntriesSorted(d.byPos)[0] : null;
+  const nPos = d ? posEntriesSorted(d.byPos).length : 0;
+  box.innerHTML = `<h2 style="margin:6px 0 2px; color:var(--navy);">${escapeHtml(p.num ? p.num + " · " : "")}${escapeHtml(displayAlias(p))}</h2>`
+    + `<p class="hint" style="margin-top:0;">${escapeHtml(p.name || "")}${p.pos ? " · Puesto en la plantilla: " + escapeHtml(p.pos) : ""}</p>`
+    + `<div class="ficha-kpis"><div class="ficha-kpi"><div class="k">Partidos con minutos</div><div class="v">${d ? d.matches : 0}</div></div>`
+    + `<div class="ficha-kpi"><div class="k">Minutos jugados</div><div class="v">${d ? d.total : 0}'</div></div>`
+    + `<div class="ficha-kpi"><div class="k">Posición principal</div><div class="v">${main ? escapeHtml(posCode(main[0]) || main[0]) + ` <span style="font-size:14px;">${Math.round(main[1]*100/d.total)}%</span>` : "—"}</div></div>`
+    + `<div class="ficha-kpi"><div class="k">Posiciones distintas</div><div class="v">${nPos}</div></div></div>`
+    + `<h3 style="color:var(--navy); margin:10px 0 0;">📍 Minutos por posición — temporada</h3>` + (d ? posBarsHtml(d.byPos) : `<p class="hint">Todavía no ha jugado minutos en partidos registrados en directo.</p>`)
+    + (d ? `<h3 style="color:var(--navy); margin:10px 0 6px;">Partido a partido</h3><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Fecha</th><th>Rival</th><th>Min</th><th>Posiciones</th></tr></thead><tbody>`
+      + [...d.perMatch].reverse().map(m=> `<tr><td>${escapeHtml(fmtFecha(m.date))}</td><td>${escapeHtml((m.condicion==="VISITANTE"?"@ ":"") + (m.rival||""))}</td><td>${m.total}</td><td style="text-align:left;">${posChipsHtml(m.byPos)}</td></tr>`).join("")
+      + `</tbody></table></div>` : "");
+}
+
+function posEventText(ev){
+  const n = id=>{ const p = players.find(x=> x.id === id); return p ? displayAlias(p) : "?"; };
+  const c = l=> posCode(l) || l || "?";
+  if(ev.playerId2) return `⇄ Intercambio de posición — ${n(ev.playerId)} ${c(ev.from)}→${c(ev.to)} · ${n(ev.playerId2)} ${c(ev.from2)}→${c(ev.to2)}`;
+  return `🔀 Cambio de posición — ${n(ev.playerId)}: ${c(ev.from)} → ${c(ev.to)}`;
+}
+function computePositionMinutes(match){
+  const res = {};
+  if(!match.live || !match.live.started) return res;
+  const base = liveBaseSlots(match);
+  const cur = {}; // pid -> { pos, start }
+  const add = (pid, pos, mins)=>{ if(!pid || mins <= 0) return; const k = pos || "Sin posición"; res[pid] = res[pid] || {}; res[pid][k] = (res[pid][k] || 0) + mins; };
+  (match.live.startersIds || []).forEach(id=>{ cur[id] = { pos: base[id] ? base[id].pos : "", start: 0 }; });
+  const close = (pid, t)=>{ if(cur[pid]){ add(pid, cur[pid].pos, t - cur[pid].start); delete cur[pid]; } };
+  match.live.events.forEach(ev=>{
+    const t = ev.minute || 0;
+    if(ev.type === "cambio"){
+      const pos = cur[ev.outId] ? cur[ev.outId].pos : "";
+      close(ev.outId, t);
+      cur[ev.inId] = { pos, start: t };
+    } else if(ev.type === "roja"){
+      close(ev.playerId, t);
+    } else if(ev.type === "posicion"){
+      [[ev.playerId, ev.to], [ev.playerId2, ev.to2]].forEach(([pid, to])=>{
+        if(!pid || !cur[pid] || !to || to === cur[pid].pos) return;
+        close(pid, t); cur[pid] = { pos: to, start: t };
+      });
+    }
+  });
+  const end = currentLiveMinute(match) || 0;
+  Object.keys(cur).forEach(pid=> close(pid, end));
+  return res;
 }
 function isGkPlayer(p){ return (p.pos || "").toLowerCase().includes("porter"); }
 function livePitchGeom(){ return liveCompactActive() ? { H:760, y0:16, ph:728 } : { H:1060, y0:20, ph:1020 }; }
@@ -4294,6 +4943,120 @@ function liveBadgesHtml(match, pid, onPitchNow){
 }
 function liveMinutesVisible(){ return liveShowMinutes || !!liveCambioOut || liveCambioQueue.length > 0; }
 
+
+// ---------------- Modo "Mover jugadores" durante el partido ----------------
+function toggleLiveMoveMode(match){
+  if(!liveMoveMode && (liveCambioOut || liveCambioQueue.length)){
+    alert("Termina o cancela el cambio en marcha antes de mover jugadores.");
+    return;
+  }
+  liveMoveMode = !liveMoveMode;
+  liveMovePending = null; liveEditingOpen = false;
+  liveSelected = null; liveCambioOut = null;
+  renderLive(match);
+}
+let liveMoveDrag = null;
+function liveMoveDown(e, match, p, div, pitch, slots){
+  if(liveMovePending) return;
+  e.preventDefault();
+  const r = pitch.getBoundingClientRect();
+  liveMoveDrag = { match, p, div, pitch, slots, r, sx:e.clientX, sy:e.clientY, moved:false, target:null, nx:slots[p.id].x, ny:slots[p.id].y };
+  try{ div.setPointerCapture(e.pointerId); }catch(err){}
+  div.addEventListener("pointermove", liveMoveMove);
+  div.addEventListener("pointerup", liveMoveUp, { once:true });
+  div.addEventListener("pointercancel", liveMoveUp, { once:true });
+}
+function liveMoveMove(e){
+  const d = liveMoveDrag; if(!d) return;
+  if(!d.moved && Math.hypot(e.clientX-d.sx, e.clientY-d.sy) < 8) return;
+  d.moved = true;
+  d.div.classList.add("dragging");
+  const g = livePitchGeom();
+  const fx = (e.clientX - d.r.left) / d.r.width, fy = (e.clientY - d.r.top) / d.r.height;
+  d.div.style.left = (fx*100) + "%"; d.div.style.top = (fy*100) + "%";
+  d.nx = Math.min(0.97, Math.max(0.03, (fx*900 - 30) / 840));
+  d.ny = Math.min(0.97, Math.max(0.03, (fy*g.H - g.y0) / g.ph));
+  let best = null, bd = 0.09;
+  Object.keys(d.slots).forEach(pid=>{
+    if(pid === d.p.id || !d.pitch.querySelector(`.lv-player[data-pid="${pid}"]`)) return;
+    const s = d.slots[pid], dd = Math.hypot(s.x - d.nx, (s.y - d.ny)*0.85);
+    if(dd < bd){ bd = dd; best = pid; }
+  });
+  d.target = best;
+  d.pitch.querySelectorAll(".lv-player").forEach(el=> el.classList.toggle("target", !!best && el.dataset.pid === best));
+}
+function liveMoveUp(){
+  const d = liveMoveDrag; liveMoveDrag = null; if(!d) return;
+  d.div.removeEventListener("pointermove", liveMoveMove);
+  const match = d.match, s = d.slots;
+  if(!d.moved){
+    liveMovePending = { pid: d.p.id, kind:"tap" };
+  } else if(d.target){
+    // Intercambio: cada uno ocupa el sitio y el puesto del otro.
+    const a = d.p.id, b = d.target, sa = s[a], sb = s[b];
+    match.live.events.push({ type:"posicion", minute: currentLiveMinute(match), second: liveSecondsNow(match),
+      playerId:a, from:sa.pos, to:sb.pos, x:sb.x, y:sb.y, playerId2:b, from2:sb.pos, to2:sa.pos, x2:sa.x, y2:sa.y });
+    if(match.live.posOverride){ delete match.live.posOverride[a]; delete match.live.posOverride[b]; }
+    liveMovePending = null;
+    saveMatch(match);
+  } else {
+    liveMovePending = { pid: d.p.id, kind:"move", nx: d.nx, ny: d.ny };
+  }
+  liveEditingOpen = !!liveMovePending;
+  renderLive(match);
+}
+function liveMoveChoose(match, to){
+  const pend = liveMovePending; if(!pend) return;
+  const { onPitch } = deriveLiveState(match);
+  const s = computeLiveSlots(match, onPitch)[pend.pid];
+  const x = pend.kind === "move" ? pend.nx : s.x, y = pend.kind === "move" ? pend.ny : s.y;
+  if(to && to !== s.pos){
+    match.live.events.push({ type:"posicion", minute: currentLiveMinute(match), second: liveSecondsNow(match), playerId: pend.pid, from: s.pos, to, x, y });
+    if(match.live.posOverride) delete match.live.posOverride[pend.pid];
+  } else if(pend.kind === "move"){
+    // Solo se recoloca en el dibujo: sigue en el mismo puesto (no cuenta como cambio de posición).
+    match.live.posOverride = match.live.posOverride || {};
+    match.live.posOverride[pend.pid] = { x, y };
+  }
+  liveMovePending = null; liveEditingOpen = false;
+  renderLive(match); saveMatch(match);
+}
+function buildLiveMovePanel(match){
+  const wrap = document.createElement("div");
+  const bar = document.createElement("div");
+  bar.className = "mv-bar";
+  bar.innerHTML = `<span>✋ MODO MOVER activado</span>`;
+  const done = document.createElement("button");
+  done.textContent = "Terminar";
+  done.addEventListener("click", ()=> toggleLiveMoveMode(match));
+  bar.appendChild(done);
+  wrap.appendChild(bar);
+  const pend = liveMovePending;
+  if(!pend){
+    const info = document.createElement("div");
+    info.className = "mv-info";
+    info.innerHTML = "Arrastra una camiseta a su nuevo sitio, suéltala encima de otro jugador para <b>intercambiarlos</b>, o tócala para cambiar solo su <b>posición</b>.<br><br>Cada cambio de posición queda apuntado en el registro con su minuto, para calcular los minutos de cada jugador en cada posición.";
+    wrap.appendChild(info);
+    return wrap;
+  }
+  const p = players.find(x=> x.id === pend.pid);
+  const { onPitch } = deriveLiveState(match);
+  const cur = (computeLiveSlots(match, onPitch)[pend.pid] || {}).pos || "";
+  const sug = pend.kind === "move" ? suggestPosByZone(pend.nx, pend.ny) : "";
+  const panel = document.createElement("div");
+  panel.className = "mv-panel";
+  panel.innerHTML = `<h4>¿En qué posición juega ahora ${escapeHtml(p ? displayAlias(p) : "")}? · min ${currentLiveMinute(match)}'</h4>`
+    + `<p><b style="color:#1f5fe0">Azul</b>: su posición actual.${sug ? ' <b style="color:#2E9E4F">Verde</b>: la que sugiere la zona donde lo has dejado.' : ""}</p>`
+    + `<div class="mv-foot">${pend.kind === "move" ? `<button id="mvOnly" style="background:var(--navy)">Solo mover${cur ? " (sigue de " + escapeHtml(posCode(cur) || cur) + ")" : ""}</button>` : ""}<button id="mvCancel" style="background:#6b7280">Cancelar</button></div>`
+    + POS_GROUPS.map(g=> `<div class="mv-grp">${g}</div><div class="mv-opts">` + POSITIONS.filter(x=> x.group === g).map(x=>
+        `<button data-p="${escapeHtml(x.label)}" class="${x.label === cur ? "cur" : x.label === sug ? "sug" : ""}">${x.code}<small>${escapeHtml(x.label)}</small></button>`).join("") + `</div>`).join("");
+  panel.querySelectorAll(".mv-opts button").forEach(b=> b.addEventListener("click", ()=> liveMoveChoose(match, b.dataset.p)));
+  const only = panel.querySelector("#mvOnly"); if(only) only.addEventListener("click", ()=> liveMoveChoose(match, null));
+  panel.querySelector("#mvCancel").addEventListener("click", ()=>{ liveMovePending = null; liveEditingOpen = false; renderLive(match); });
+  wrap.appendChild(panel);
+  return wrap;
+}
+
 function buildLivePlayersCol(match){
   const { onPitch, sentOff } = deriveLiveState(match);
   const col = document.createElement("div");
@@ -4310,14 +5073,32 @@ function buildLivePlayersCol(match){
   minBtn.className = "lv-min-btn" + (liveShowMinutes ? " on" : "");
   minBtn.textContent = liveShowMinutes ? "⏱ Ocultar minutos" : "⏱ Ver minutos";
   minBtn.addEventListener("click", ()=>{ liveShowMinutes = !liveShowMinutes; refreshLivePlayersCol(match); });
-  head.appendChild(minBtn);
+  const btnWrap = document.createElement("div");
+  if(!match.live.finished){
+    const mvBtn = document.createElement("button");
+    mvBtn.className = "lv-move-btn" + (liveMoveMode ? " on" : "");
+    mvBtn.textContent = liveMoveMode ? "✋ Mover jugadores: ON" : "✋ Mover jugadores";
+    mvBtn.addEventListener("click", ()=> toggleLiveMoveMode(match));
+    btnWrap.appendChild(mvBtn);
+  }
+  btnWrap.appendChild(minBtn);
+  head.appendChild(btnWrap);
   col.appendChild(head);
 
   // Campo
   const pitch = document.createElement("div");
-  pitch.className = "lv-pitch";
+  pitch.className = "lv-pitch" + (liveMoveMode ? " moving" : "");
   pitch.innerHTML = livePitchBgSvg();
   const slots = computeLiveSlots(match, onPitch);
+  const pgm = livePitchGeom();
+  if(liveMovePending && liveMovePending.kind === "move" && slots[liveMovePending.pid]){
+    const o = slots[liveMovePending.pid];
+    const g = document.createElement("div");
+    g.className = "lv-ghost";
+    g.style.left = (30 + o.x*840) / 900 * 100 + "%";
+    g.style.top = (pgm.y0 + o.y*pgm.ph) / pgm.H * 100 + "%";
+    pitch.appendChild(g);
+  }
   let k = 0;
   const badgeLayers = [];
   players.filter(p=> onPitch.has(p.id)).forEach(p=>{
@@ -4328,12 +5109,17 @@ function buildLivePlayersCol(match){
     if(liveSelected === p.id) cls += " sel";
     if(liveCambioOut === p.id) cls += " out";
     if(queuedOut) cls += " dim";
+    const pend = liveMovePending && liveMovePending.pid === p.id ? liveMovePending : null;
+    if(pend) cls += " act";
     div.className = cls;
-    div.style.left = (30 + s.x*840) / 900 * 100 + "%";
+    div.dataset.pid = p.id;
+    const px = pend && pend.kind === "move" ? pend.nx : s.x, py = pend && pend.kind === "move" ? pend.ny : s.y;
+    div.style.left = (30 + px*840) / 900 * 100 + "%";
     const pg = livePitchGeom();
-    div.style.top = (pg.y0 + s.y*pg.ph) / pg.H * 100 + "%";
+    div.style.top = (pg.y0 + py*pg.ph) / pg.H * 100 + "%";
     const gk = s.gk || isGkPlayer(p);
-    div.innerHTML = liveKitSvg(p, gk, "lv" + (k++)) + (showMin ? liveMinutesHtml(mins[p.id]) : "");
+    const posTag = liveMoveMode ? `<span class="lv-pos">${escapeHtml(posCode(s.pos) || "?")}${pend && pend.kind === "move" ? " → ?" : ""}</span>` : "";
+    div.innerHTML = liveKitSvg(p, gk, "lv" + (k++)) + posTag + (showMin && !liveMoveMode ? liveMinutesHtml(mins[p.id]) : "");
     const badges = liveBadgesHtml(match, p.id, true);
     if(badges){
       const layer = document.createElement("div");
@@ -4343,7 +5129,9 @@ function buildLivePlayersCol(match){
       badgeLayers.push(layer);
     }
     div.title = (p.num ? p.num + " · " : "") + displayAlias(p);
-    if(!queuedOut){
+    if(liveMoveMode){
+      div.addEventListener("pointerdown", (e)=> liveMoveDown(e, match, p, div, pitch, slots));
+    } else if(!queuedOut){
       div.addEventListener("click", ()=>{
         if(liveCambioOut) return; // en modo cambio se elige en el banquillo
         liveSelected = (liveSelected === p.id) ? null : p.id;
@@ -5105,6 +5893,9 @@ function renderLive(match){
       confirmAllBtn.addEventListener("click", ()=>{
         liveCambioQueue.forEach(q=>{
           match.live.events.push({ type:"cambio", minute: currentLiveMinute(match), second: liveSecondsNow(match), outId: q.outId, inId: q.inId });
+          // El que entra ocupa el sitio dibujado del que sale (también si se había recolocado a mano).
+          const ov = match.live.posOverride;
+          if(ov && ov[q.outId]){ ov[q.inId] = ov[q.outId]; delete ov[q.outId]; }
         });
         liveCambioQueue = [];
         liveEditingOpen = false;
@@ -5210,6 +6001,10 @@ function renderLive(match){
     });
     actionsCol.appendChild(undoBtn);
 
+    if(liveMoveMode){
+      actionsCol.innerHTML = "";
+      actionsCol.appendChild(buildLiveMovePanel(match));
+    }
     mainGrid.appendChild(actionsCol);
     liveSection.appendChild(mainGrid);
   }
@@ -5256,6 +6051,8 @@ function renderLive(match){
     if(ev.type === "cambio"){
       const pOut = players.find(p=>p.id===ev.outId), pIn = players.find(p=>p.id===ev.inId);
       text = "🔄 Sale " + (pOut ? (pOut.alias||pOut.name) : "?") + " · Entra " + (pIn ? (pIn.alias||pIn.name) : "?");
+    } else if(ev.type === "posicion"){
+      text = posEventText(ev);
     } else {
       const p = players.find(x=>x.id===ev.playerId);
       let evLabel;
@@ -5284,7 +6081,9 @@ function renderLive(match){
       const editBtn = document.createElement("button");
       editBtn.className = "small-edit";
       editBtn.textContent = "✏️";
-      if(ev.type === "cambio"){
+      if(ev.type === "posicion"){
+        editBtn.style.visibility = "hidden"; // para corregirlo: bórralo y vuelve a moverlo
+      } else if(ev.type === "cambio"){
         editBtn.title = "Corregir quién sale y quién entra";
         editBtn.addEventListener("click", ()=> openSubEditor(match, ev, idx, rowWrap));
       } else {
@@ -5417,7 +6216,7 @@ function renderMatchDetail(){
   liveEditingOpen = false;
   liveFeedFilter = "todo";
   ensureStatsForMatch(currentMatch);
-  liveSelected = null; liveCambioOut = null; liveCambioQueue = [];
+  liveSelected = null; liveCambioOut = null; liveCambioQueue = []; liveMoveMode = false; liveMovePending = null;
   ensureLive(currentMatch);
   renderLive(currentMatch);
   if(currentMatch.live.started && currentMatch.live.running && !currentMatch.live.finished) startLiveTicker();
@@ -5889,6 +6688,8 @@ document.querySelectorAll(".equipo-subnav-btn").forEach(btn=>{
     document.getElementById("equipoPanelDiario").classList.toggle("hidden", equipoActivePanel!=="diario");
     document.getElementById("equipoPanelAsistencia").classList.toggle("hidden", equipoActivePanel!=="asistencia");
     document.getElementById("equipoPanelPuntos").classList.toggle("hidden", equipoActivePanel!=="puntos");
+    document.getElementById("equipoPanelPosiciones").classList.toggle("hidden", equipoActivePanel!=="posiciones");
+    if(equipoActivePanel === "posiciones") renderSeasonPositions();
     if(equipoActivePanel === "asistencia") renderAttendanceHistory();
     if(equipoActivePanel === "puntos") renderPointsHistory();
   });
